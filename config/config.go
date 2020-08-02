@@ -26,6 +26,7 @@ type Config struct {
 	BindIP   string             `mapstructure:"bind_ip"`
 	BindPort int                `mapstructure:"bind_port"`
 	Encoder  Encoder            `mapstructure:"encoder"`
+	Message  string             `mapstructure:"message"`
 }
 
 type Account struct {

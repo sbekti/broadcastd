@@ -9,6 +9,11 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	neturl "net/url"
+	"time"
+)
+
+const (
+	httpTimeout = 30 * time.Second
 )
 
 type config struct {
@@ -76,6 +81,7 @@ func importConfig(config config) (*Instagram, error) {
 			Transport: &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 			},
+			Timeout: httpTimeout,
 		},
 	}
 
@@ -83,9 +89,7 @@ func importConfig(config config) (*Instagram, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	client.httpClient.Jar.SetCookies(url, config.Cookies)
-
 	client.init()
 
 	client.Account = &Account{client: client, ID: config.ID}

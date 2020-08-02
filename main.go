@@ -16,6 +16,10 @@ func main() {
 	}
 
 	b := broadcast.NewBroadcast(c)
+	if err := b.Login(); err != nil {
+		log.Fatal(err)
+	}
+
 	s := server.NewServer(c.BindIP, c.BindPort, b)
 	go func() {
 		if err := s.Start(); err != nil {

@@ -29,22 +29,31 @@ func PostLive(c echo.Context) error {
 			errorMsg = "Broadcast is currently not live."
 		}
 
-		res := postLiveRes{
+		return c.JSON(http.StatusBadRequest, postLiveRes{
 			Status: "error",
 			Error:  errorMsg,
-		}
-		return c.JSON(http.StatusBadRequest, res)
+		})
 	}
 
 	if req.Live {
 		bc.Broadcast.Start()
+		return c.JSON(http.StatusOK, postLiveRes{
+			Status: "ok",
+			Error:  "",
+		})
 	} else {
-		bc.Broadcast.Stop()
+		err := bc.Broadcast.Stop()
+		if err != nil {
+			return c.JSON(http.StatusOK, postLiveRes{
+				Status: "error",
+				Error:  err.Error(),
+			})
+		}
+
+		return c.JSON(http.StatusOK, postLiveRes{
+			Status: "ok",
+			Error:  "",
+		})
 	}
 
-	res := postLiveRes{
-		Status: "ok",
-		Error:  "",
-	}
-	return c.JSON(http.StatusOK, res)
 }

@@ -1,7 +1,8 @@
-package process
+package stream
 
 import (
 	"context"
+	"github.com/labstack/gommon/log"
 	"os"
 	"os/exec"
 	"time"
@@ -12,20 +13,26 @@ const (
 	restartDelay = 5 * time.Second
 )
 
-type Process struct {
+type Stream struct {
 	Status      string
 	Command     string
 	Args        []string
+	UploadURL   string
+	BroadcastID int
 	AutoRestart bool
+	process     *os.Process
 }
 
-func (p *Process) Run(ctx context.Context) error {
-	name, err := exec.LookPath(p.Command)
+func (s *Stream) Run(ctx context.Context) error {
+	name, err := exec.LookPath(s.Command)
 	if err != nil {
 		return err
 	}
 
-	cmd := exec.Command(name, p.Args...)
+	args := s.Args
+	args = append(args, s.UploadURL)
+
+	cmd := exec.Command(name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -34,6 +41,7 @@ func (p *Process) Run(ctx context.Context) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
+	s.process = cmd.Process
 
 	go func() {
 		done <- cmd.Wait()
@@ -44,14 +52,17 @@ func (p *Process) Run(ctx context.Context) error {
 		_ = cmd.Process.Signal(os.Interrupt)
 		select {
 		case <-time.After(gracePeriod):
+			log.Errorf("process %s still did not exit, sending a SIGKILL", name)
 			return cmd.Process.Kill()
 		case <-done:
+			log.Infof("process %s gracefully exited", name)
 			return nil
 		}
 	case err = <-done:
-		if p.AutoRestart {
+		if s.AutoRestart {
+			log.Errorf("process %s exited and will be restarted", name)
 			time.Sleep(restartDelay)
-			return p.Run(ctx)
+			return s.Run(ctx)
 		}
 	}
 
@@ -59,4 +70,8 @@ func (p *Process) Run(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (s *Stream) Kill() error {
+	return s.process.Kill()
 }
