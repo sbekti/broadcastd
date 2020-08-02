@@ -30,13 +30,8 @@ WORKDIR /dist
 # Copy binary from build to main folder
 RUN cp /build/main .
 
-# Build a small image
-FROM alpine:3.8
-
-# Install ffmpeg
-RUN apk update && \
-    apk add --no-cache \
-    ffmpeg
+# Base image with ffmpeg
+FROM jrottenberg/ffmpeg:4.3.1-alpine38
 
 # Copy the main binary
 COPY --from=build /dist/main /broadcastd

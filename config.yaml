@@ -1,4 +1,4 @@
-input_url: 'rtmp://localhost/live/test'
+input_url: 'rtmp://ingestd/live/test'
 #encoder:
 #  path: '/usr/local/bin/ffmpeg'
 #  args: ['-analyzeduration', '20M', '-probesize', '20M', '-c', 'copy', '-bufsize', '4096k', '-max_muxing_queue_size', '1024']
