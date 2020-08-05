@@ -14,6 +14,7 @@ var (
 		"-c", "copy",
 		"-bufsize", "4096k",
 		"-max_muxing_queue_size", "1024",
+		"-loglevel", "error",
 	}
 )
 

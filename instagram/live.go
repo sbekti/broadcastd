@@ -314,6 +314,8 @@ func (live *Live) GetComment(broadcastID int, numCommentsRequested int, lastComm
 		return nil, err
 	}
 
+	fmt.Printf("getComment: %s\n", string(body))
+
 	res := &LiveGetCommentResponse{}
 	err = json.Unmarshal(body, res)
 	if err != nil {
@@ -345,6 +347,8 @@ func (live *Live) HeartbeatAndGetViewerCount(broadcastID int) (*LiveHeartbeatAnd
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Printf("getHeartbeat: %s\n", string(body))
 
 	res := &LiveHeartbeatAndGetViewerCountResponse{}
 	err = json.Unmarshal(body, res)

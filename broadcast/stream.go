@@ -13,7 +13,9 @@ import (
 const (
 	streamWidth      = 720
 	streamHeight     = 1280
+	cooldownDelay    = 30 * time.Second
 	procRestartDelay = 5 * time.Second
+	heartbeatDelay   = 5 * time.Second
 )
 
 type FSMState uint32
@@ -24,6 +26,7 @@ const (
 	challenge
 	create
 	upload
+	cooldown
 )
 
 type Stream struct {
@@ -38,6 +41,14 @@ type Stream struct {
 	cancel       context.CancelFunc
 	state        FSMState
 	done         chan error
+}
+
+type streamStoppedError struct {
+	broadcastID int
+}
+
+func (e streamStoppedError) Error() string {
+	return fmt.Sprintf("stream %d has stopped", e.broadcastID)
 }
 
 func NewStream(name string, config *Config) *Stream {
@@ -63,8 +74,6 @@ func (s *Stream) doIdle() {
 
 	log.Infof("stream: %s: idling...", s.name)
 	time.Sleep(5 * time.Second)
-
-	s.state = login
 }
 
 func (s *Stream) doLogin() {
@@ -80,7 +89,7 @@ func (s *Stream) doLogin() {
 	ce, ok := err.(instagram.ChallengeError)
 	if !ok {
 		log.Errorf("stream: %s: unable to login: %v", s.name, err)
-		s.state = idle
+		s.state = cooldown
 		return
 	}
 
@@ -95,7 +104,7 @@ func (s *Stream) doChallenge() {
 	err := s.respondChallenge()
 	if err != nil {
 		log.Errorf("stream: %s: unable to complete challenge: %v", s.name, err)
-		s.state = idle
+		s.state = cooldown
 		return
 	}
 
@@ -108,7 +117,7 @@ func (s *Stream) doCreate() {
 	err := s.create(true)
 	if err != nil {
 		log.Errorf("stream: %s: unable to create live: %v", s.name, err)
-		s.state = idle
+		s.state = cooldown
 		return
 	}
 
@@ -122,6 +131,15 @@ func (s *Stream) doUpload() {
 	if err != nil {
 		log.Errorf("stream: %s: unable to upload: %v", s.name, err)
 	}
+}
+
+func (s *Stream) doCooldown() {
+	println("-------- in doCooldown")
+
+	log.Infof("stream: %s: cooling down...", s.name)
+	time.Sleep(cooldownDelay)
+
+	s.state = login
 }
 
 func (s *Stream) doEnd() error {
@@ -159,6 +177,8 @@ func (s *Stream) stateMachine() {
 		s.doCreate()
 	case upload:
 		s.doUpload()
+	case cooldown:
+		s.doCooldown()
 	}
 }
 
@@ -166,6 +186,7 @@ func (s *Stream) Start() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.ctx = ctx
 	s.cancel = cancel
+	s.state = login
 
 	go func() {
 		for {
@@ -308,6 +329,38 @@ func (s *Stream) upload() error {
 		done <- cmd.Wait()
 	}()
 
+	go func() {
+		lastCommentTS := 0
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(heartbeatDelay):
+				err, newLastCommentTS := s.monitor(lastCommentTS)
+				if err == nil {
+					lastCommentTS = newLastCommentTS
+					continue
+				}
+
+				se, ok := err.(streamStoppedError)
+				if !ok {
+					log.Errorf("stream: %s: %v", s.name, err)
+					continue
+				}
+
+				log.Warnf("stream: %s: broadcast %d has stopped", s.name, se.broadcastID)
+				err = s.doEnd()
+				if err != nil {
+					log.Errorf("stream: %s: %v", s.name, err)
+				}
+
+				s.state = login
+				cancel()
+			}
+		}
+	}()
+
 	select {
 	case <-ctx.Done():
 		log.Infof("stream: %s: killing process", s.name)
@@ -317,6 +370,40 @@ func (s *Stream) upload() error {
 		time.Sleep(procRestartDelay)
 		return fmt.Errorf("stream: %s: process exited and will be restarted", s.name)
 	}
+}
+
+func (s *Stream) monitor(lastCommentTS int) (error, int) {
+	heartbeat, err := s.instagram.Live.HeartbeatAndGetViewerCount(s.broadcastID)
+	if err != nil {
+		return err, lastCommentTS
+	}
+	log.Infof("stream: %s: broadcast status: %s", s.name, heartbeat.BroadcastStatus)
+	fmt.Printf("heartbeat: %+v\n", heartbeat)
+
+	if heartbeat.BroadcastStatus == "stopped" {
+		se := streamStoppedError{
+			broadcastID: s.broadcastID,
+		}
+		return se, lastCommentTS
+	}
+
+	comments, err := s.instagram.Live.GetComment(s.broadcastID, 10, lastCommentTS)
+	if err != nil {
+		return err, lastCommentTS
+	}
+
+	newLastCommentTS := lastCommentTS
+
+	for i := len(comments.Comments)-1; i >= 0; i-- {
+		comment := comments.Comments[i]
+		log.Warnf("stream: %s: comment %d at %d %s: %s", s.name, comment.PK, comment.CreatedAt, comment.User.Username, comment.Text)
+
+		if comment.CreatedAt > newLastCommentTS {
+			newLastCommentTS = comment.CreatedAt
+			log.Warnf("updated newLastCommentTS to: %d", newLastCommentTS)
+		}
+	}
+	return nil, newLastCommentTS
 }
 
 func (s *Stream) end() error {
