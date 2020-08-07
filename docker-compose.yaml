@@ -1,0 +1,14 @@
+version: '3'
+services:
+  ingestd:
+    image: 'shbekti/ingestd:latest'
+    ports:
+      - '1935:1935'
+    environment:
+      BROADCASTD_API_URL: 'http://broadcastd:3000'
+  broadcastd:
+    build: .
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./config.yaml:/config.yaml
