@@ -25,3 +25,8 @@ docker-compose up --build
 
 ## Pull Requests
 Yes please.
+
+## Acknowledgements
+Parts of the code are based on the following projects:
+- https://github.com/dilame/instagram-private-api
+- https://github.com/ahmdrz/goinsta
