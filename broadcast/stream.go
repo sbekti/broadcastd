@@ -436,7 +436,7 @@ func (s *Stream) end() error {
 
 	uploadID, err := s.instagram.UploadPhoto(bytes.NewReader(jpegThumb))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	igtv, err := s.instagram.Live.AddPostLiveToIGTV(
