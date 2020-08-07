@@ -103,6 +103,17 @@ type LiveGetCommentResponse struct {
 	Status                     string      `json:"status"`
 }
 
+type LiveGetPostLiveThumbnailsResponse struct {
+	Thumbnails []string `json:"thumbnails"`
+	Status     string   `json:"status"`
+}
+
+type LiveAddPostLiveToIGTVResponse struct {
+	Success    bool   `json:"success"`
+	IGTVPostID int64  `json:"igtv_post_id"`
+	Status     string `json:"status"`
+}
+
 func (live *Live) Create(width int, height int, message string) (*LiveCreateResponse, error) {
 	client := live.client
 
@@ -314,8 +325,6 @@ func (live *Live) GetComment(broadcastID int, numCommentsRequested int, lastComm
 		return nil, err
 	}
 
-	fmt.Printf("getComment: %s\n", string(body))
-
 	res := &LiveGetCommentResponse{}
 	err = json.Unmarshal(body, res)
 	if err != nil {
@@ -348,9 +357,71 @@ func (live *Live) HeartbeatAndGetViewerCount(broadcastID int) (*LiveHeartbeatAnd
 		return nil, err
 	}
 
-	fmt.Printf("getHeartbeat: %s\n", string(body))
-
 	res := &LiveHeartbeatAndGetViewerCountResponse{}
+	err = json.Unmarshal(body, res)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (live *Live) GetPostLiveThumbnails(broadcastID int) (*LiveGetPostLiveThumbnailsResponse, error) {
+	client := live.client
+
+	data, err := client.prepareData(
+		map[string]interface{}{},
+	)
+
+	body, err := client.sendRequest(
+		&reqOptions{
+			Endpoint: fmt.Sprintf(igAPILiveGetPostLiveThumbnails, broadcastID),
+			Query:    generateSignature(data),
+			IsPost:   false,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &LiveGetPostLiveThumbnailsResponse{}
+	err = json.Unmarshal(body, res)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (live *Live) AddPostLiveToIGTV(broadcastID int, coverUploadID string, title string, description string, sharePreviewToFeed bool) (*LiveAddPostLiveToIGTVResponse, error) {
+	client := live.client
+
+	data, err := client.prepareData(
+		map[string]interface{}{
+			"broadcast_id":               broadcastID,
+			"cover_upload_id":            coverUploadID,
+			"description":                description,
+			"title":                      title,
+			"internal_only":              false,
+			"igtv_share_preview_to_feed": sharePreviewToFeed,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := client.sendRequest(
+		&reqOptions{
+			Endpoint: igAPILiveAddPostLiveToIGTV,
+			IsPost:   true,
+			Query:    generateSignature(data),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &LiveAddPostLiveToIGTVResponse{}
 	err = json.Unmarshal(body, res)
 	if err != nil {
 		return nil, err

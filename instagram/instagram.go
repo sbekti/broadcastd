@@ -1,10 +1,16 @@
 package instagram
 
 import (
+	"bytes"
 	"encoding/json"
+	"image/jpeg"
+	"image/png"
+	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
 	"strconv"
+	"strings"
 )
 
 type Instagram struct {
@@ -17,6 +23,7 @@ type Instagram struct {
 	rankToken    string
 	token        string
 	challengeURL string
+	sessionID    string
 	httpClient   *http.Client
 
 	Account   *Account
@@ -219,6 +226,13 @@ func (i *Instagram) Login() error {
 		return err
 	}
 
+	cookieURL, _ := url.Parse(igBaseURL)
+	for _, value := range i.httpClient.Jar.Cookies(cookieURL) {
+		if strings.Contains(value.Name, "sessionid") {
+			i.sessionID = value.Value
+		}
+	}
+
 	i.Account = &res.Account
 	i.Account.client = i
 	i.rankToken = strconv.FormatInt(i.Account.ID, 10) + "_" + i.uuid
@@ -261,4 +275,38 @@ func (i *Instagram) Logout() (*LogoutResponse, error) {
 	}
 
 	return res, nil
+}
+
+func (i *Instagram) GetThumbnailAsJPEG(url string, quality int) ([]byte, error) {
+	inBuffer := bytes.NewBuffer([]byte{})
+	var req *http.Request
+
+	req, err := http.NewRequest("GET", url, inBuffer)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := i.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	imageData, err := png.Decode(bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	outBuffer := bytes.NewBuffer([]byte{})
+	err = jpeg.Encode(outBuffer, imageData, &jpeg.Options{Quality: quality})
+	if err != nil {
+		return nil, err
+	}
+
+	return ioutil.ReadAll(outBuffer)
 }

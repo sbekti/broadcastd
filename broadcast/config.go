@@ -2,7 +2,7 @@ package broadcast
 
 import (
 	"github.com/spf13/viper"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 	"os"
 )
 
@@ -23,13 +23,21 @@ type Encoder struct {
 	Args    []string `mapstructure:"args" yaml:"args"`
 }
 
+type IGTV struct {
+	Enabled     bool   `mapstructure:"enabled" yaml:"enabled"`
+	MinDuration int    `mapstructure:"min_duration" yaml:"min_duration"`
+	ShareToFeed bool   `mapstructure:"share_to_feed" yaml:"share_to_feed"`
+	Description string `mapstructure:"description" yaml:"description"`
+}
+
 type Config struct {
 	InputURL string              `mapstructure:"input_url" yaml:"input_url"`
 	Accounts map[string]*Account `mapstructure:"accounts" yaml:"accounts"`
 	BindIP   string              `mapstructure:"bind_ip" yaml:"bind_ip"`
 	BindPort int                 `mapstructure:"bind_port" yaml:"bind_port"`
 	Encoder  Encoder             `mapstructure:"encoder" yaml:"encoder"`
-	Message  string              `mapstructure:"message" yaml:"message"`
+	Title    string              `mapstructure:"title" yaml:"title"`
+	IGTV     IGTV                `mapstructure:"igtv" yaml:"igtv"`
 }
 
 type Account struct {
@@ -59,6 +67,10 @@ func LoadConfig() (*Config, error) {
 
 	if config.Encoder.Args == nil {
 		config.Encoder.Args = encoderArgs
+	}
+
+	if config.IGTV.MinDuration < 2 {
+		config.IGTV.MinDuration = 2
 	}
 
 	return config, nil

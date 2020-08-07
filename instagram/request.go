@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type reqOptions struct {
@@ -17,6 +20,12 @@ type reqOptions struct {
 	IsPost     bool
 	UseV2      bool
 	Query      map[string]string
+}
+
+var uploadPhotoResponse struct {
+	UploadID       string      `json:"upload_id"`
+	XsharingNonces interface{} `json:"xsharing_nonces"`
+	Status         string      `json:"status"`
 }
 
 type HTTPErrorGeneric struct {
@@ -184,4 +193,72 @@ func checkError(code int, body []byte) (err error) {
 	}
 
 	return nil
+}
+
+func (i *Instagram) UploadPhoto(photo io.Reader) (string, error) {
+	uploadID := time.Now().Unix()
+	rndNumber := rand.Intn(9999999999-1000000000) + 1000000000
+	name := strconv.FormatInt(uploadID, 10) + "_0_" + strconv.Itoa(rndNumber)
+
+	inBuffer := new(bytes.Buffer)
+	_, err := inBuffer.ReadFrom(photo)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequest("POST", igBaseURL+igAPIUploadPhoto+name, inBuffer)
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Connection", "close")
+	req.Header.Set("Content-type", "application/octet-stream")
+	req.Header.Set("Accept-Language", "en-US")
+	req.Header.Set("User-Agent", igUserAgent)
+	req.Header.Set("Cookie2", "$Version=1")
+	req.Header.Set("Offset", "0")
+	req.Header.Set("X-IG-App-ID", fbAnalytics)
+	req.Header.Set("X-IG-Capabilities", igCapabilities)
+	req.Header.Set("X-IG-Connection-Type", igConnType)
+	req.Header.Set("X-Entity-Name", name)
+
+	ruploadParams := map[string]string{
+		"retry_context":     `{"num_step_auto_retry": 0, "num_reupload": 0, "num_step_manual_retry": 0}`,
+		"media_type":        "1",
+		"upload_id":         strconv.FormatInt(uploadID, 10),
+		"xsharing_user_ids": "[]",
+		"image_compression": `{"lib_name": "moz", "lib_version": "3.1.m", "quality": "80"}`,
+	}
+	params, err := json.Marshal(ruploadParams)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("X-Instagram-Rupload-Params", string(params))
+	req.Header.Set("X-Entity-Length", strconv.FormatInt(req.ContentLength, 10))
+
+	resp, err := i.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("upload photo: failed, status code, result: %s", resp.Status)
+	}
+
+	err = json.Unmarshal(body, &uploadPhotoResponse)
+	if err != nil {
+		return "", err
+	}
+
+	if uploadPhotoResponse.Status != "ok" {
+		return "", fmt.Errorf("upload photo: unknown error, status: %s", uploadPhotoResponse.Status)
+	}
+
+	return strconv.FormatInt(uploadID, 10), nil
 }

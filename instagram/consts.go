@@ -1,8 +1,9 @@
 package instagram
 
 const (
-	igAPIBaseURL    = "https://i.instagram.com/api/v1/"
-	igAPIBaseURLV2  = "https://i.instagram.com/api/v2/"
+	igBaseURL       = "https://i.instagram.com"
+	igAPIBaseURL    = igBaseURL + "/api/v1"
+	igAPIBaseURLV2  = igBaseURL + "/api/v2"
 	igSigKey        = "c36436a942ea1dbb40d7f2d7d45280a620d991ce8c62fb4ce600f0a048c32c11"
 	igSigKeyVersion = "4"
 	igUserAgent     = "Instagram 107.0.0.27.121 Android (24/7.0; 380dpi; 1080x1920; OnePlus; ONEPLUS A3010; OnePlus3T; qcom; en_US)"
@@ -14,21 +15,24 @@ const (
 )
 
 const (
-	igAPIURLCurrentUser      = "accounts/current_user/"
-	igAPIURLReadMSISDNHeader = "accounts/read_msisdn_header/"
-	igAPIURLContactPrefill   = "accounts/contact_point_prefill/"
-	igAPIURLZrToken          = "zr/token/result/"
-	igAPIURLLogin            = "accounts/login/"
-	igAPIURLLogout           = "accounts/logout/"
-	igAPIURLQeSync           = "qe/sync/"
-	igAPIURLLogAttribution   = "attribution/log_attribution/"
+	igAPIURLCurrentUser      = "/accounts/current_user/"
+	igAPIURLReadMSISDNHeader = "/accounts/read_msisdn_header/"
+	igAPIURLContactPrefill   = "/accounts/contact_point_prefill/"
+	igAPIURLZrToken          = "/zr/token/result/"
+	igAPIURLLogin            = "/accounts/login/"
+	igAPIURLLogout           = "/accounts/logout/"
+	igAPIURLQeSync           = "/qe/sync/"
+	igAPIURLLogAttribution   = "/attribution/log_attribution/"
 
-	igAPILiveCreate                     = "live/create/"
-	igAPILiveStart                      = "live/%d/start/"
-	igAPILiveEnd                        = "live/%d/end_broadcast/"
-	igAPILiveInfo                       = "live/%d/info/"
-	igAPILiveAddToPost                  = "live/%d/add_to_post_live/"
-	igAPILiveUnmuteComment              = "live/%d/unmute_comment/"
-	igAPILiveGetComment                 = "live/%d/get_comment/"
-	igAPILiveHeartbeatAndGetViewerCount = "live/%d/heartbeat_and_get_viewer_count/"
+	igAPILiveCreate                     = "/live/create/"
+	igAPILiveStart                      = "/live/%d/start/"
+	igAPILiveEnd                        = "/live/%d/end_broadcast/"
+	igAPILiveInfo                       = "/live/%d/info/"
+	igAPILiveAddToPost                  = "/live/%d/add_to_post_live/"
+	igAPILiveUnmuteComment              = "/live/%d/unmute_comment/"
+	igAPILiveGetComment                 = "/live/%d/get_comment/"
+	igAPILiveHeartbeatAndGetViewerCount = "/live/%d/heartbeat_and_get_viewer_count/"
+	igAPILiveGetPostLiveThumbnails      = "/live/%d/get_post_live_thumbnails/"
+	igAPILiveAddPostLiveToIGTV          = "/live/add_post_live_to_igtv/"
+	igAPIUploadPhoto                    = "/rupload_igphoto/"
 )

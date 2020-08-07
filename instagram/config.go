@@ -24,11 +24,12 @@ type config struct {
 	RankToken string         `json:"rank_token"`
 	Token     string         `json:"token"`
 	PhoneID   string         `json:"phone_id"`
+	SessionID string         `json:"session_id"`
 	Cookies   []*http.Cookie `json:"cookies"`
 }
 
 func exportConfig(client *Instagram, writer io.Writer) error {
-	url, err := neturl.Parse(igAPIBaseURL)
+	url, err := neturl.Parse(igBaseURL)
 	if err != nil {
 		return err
 	}
@@ -41,6 +42,7 @@ func exportConfig(client *Instagram, writer io.Writer) error {
 		RankToken: client.rankToken,
 		Token:     client.token,
 		PhoneID:   client.phoneID,
+		SessionID: client.sessionID,
 		Cookies:   client.httpClient.Jar.Cookies(url),
 	}
 
@@ -65,11 +67,6 @@ func ExportToString(client *Instagram) (string, error) {
 }
 
 func importConfig(config config) (*Instagram, error) {
-	url, err := neturl.Parse(igAPIBaseURL)
-	if err != nil {
-		return nil, err
-	}
-
 	client := &Instagram{
 		username:  config.Username,
 		deviceID:  config.DeviceID,
@@ -85,11 +82,27 @@ func importConfig(config config) (*Instagram, error) {
 		},
 	}
 
-	client.httpClient.Jar, err = cookiejar.New(nil)
+	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, err
 	}
-	client.httpClient.Jar.SetCookies(url, config.Cookies)
+	client.httpClient.Jar = jar
+
+	baseURL, err := neturl.Parse(igBaseURL)
+	if err != nil {
+		return nil, err
+	}
+	client.httpClient.Jar.SetCookies(baseURL, []*http.Cookie{{
+		Name:  "sessionid",
+		Value: config.SessionID,
+	}})
+
+	apiBaseURL, err := neturl.Parse(igAPIBaseURL)
+	if err != nil {
+		return nil, err
+	}
+	client.httpClient.Jar.SetCookies(apiBaseURL, config.Cookies)
+
 	client.init()
 
 	client.Account = &Account{client: client, ID: config.ID}

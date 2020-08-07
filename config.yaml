@@ -1,10 +1,43 @@
+---
+# [REQUIRED] The input RTMP stream. Can be set to the ingestd RTMP URL.
 input_url: 'rtmp://ingestd/live/test'
-#encoder:
-#  path: '/usr/local/bin/ffmpeg'
-#  args: ['-analyzeduration', '20M', '-probesize', '20M', '-c', 'copy', '-bufsize', '4096k', '-max_muxing_queue_size', '1024']
-bind_ip: ''
-bind_port: 3000
-message: 'Powered by broadcastd'
+
+# [REQUIRED] Specify your accounts and their passwords below.
 accounts:
+  # Change this to your own account.
   my_account:
-    token: ''
+    password: ''
+
+# Encoder (ffmpeg) settings. If not specified, the below defaults will be used.
+# The ffmpeg binary is included in the Docker container image.
+# encoder:
+#   path: '/usr/local/bin/ffmpeg'
+#   args: ['-analyzeduration', '20M', '-probesize', '20M', '-c', 'copy', '-bufsize', '4096k', '-max_muxing_queue_size', '1024', '-loglevel', 'error']
+
+# The IP for the HTTP server to bind to. Default: '' (0.0.0.0)
+bind_ip: ''
+
+# The port number for the HTTP server to bind to. Default: 3000
+bind_port: 3000
+
+# The text to be displayed in live notifications.
+# Also used as the title when saving to IGTV. Default: ''
+title: 'Test broadcast'
+
+# IGTV settings. If not specified, posting to IGTV will be disabled.
+igtv:
+  # If enabled, live broadcasts will be saved as IGTV posts/videos.
+  # This, however, will disable posting the live as story since they
+  # are mutually exclusive. Default: false
+  enabled: true
+
+  # If the live duration is shorter than the below value, the live will
+  # not be saved to IGTV. Value is in minutes and cannot be less than 2.
+  # Default: 2
+  min_duration: 5
+
+  # Share IGTV video to feed. Default: false
+  share_to_feed: true
+
+  # The description to be put in the IGTV video. Default: ''
+  description: ''
