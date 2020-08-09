@@ -24,10 +24,13 @@ bind_port: 3000
 # Also used as the title when saving to IGTV. Default: ''
 title: 'Test broadcast'
 
+# Notify followers when go live. Default: false
+notify: true
+
 # IGTV settings. If not specified, posting to IGTV will be disabled.
 igtv:
   # If enabled, live broadcasts will be saved as IGTV posts/videos.
-  # This, however, will disable posting the live as story since they
+  # This, however, will disable posting the live to Stories since they
   # are mutually exclusive. Default: false
   enabled: true
 

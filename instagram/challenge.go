@@ -169,5 +169,5 @@ func (challenge *Challenge) Process(apiURL string) error {
 		return challenge.deltaLoginReview()
 	}
 
-	return ChallengeProcessError{StepName: challenge.StepName}
+	return &ChallengeProcessError{StepName: challenge.StepName}
 }

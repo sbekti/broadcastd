@@ -1,13 +1,26 @@
 package main
 
 import (
+	"fmt"
 	"github.com/labstack/gommon/log"
 	"github.com/sbekti/broadcastd/broadcast"
 	"os"
 	"os/signal"
+	"runtime"
+	"time"
 )
 
 func main() {
+	// TODO: Make log level configurable.
+	log.SetLevel(log.DEBUG)
+
+	go func() {
+		for {
+			fmt.Printf("GOROUTINES: %d\n", runtime.NumGoroutine())
+			time.Sleep(3 * time.Second)
+		}
+	}()
+
 	c, err := broadcast.LoadConfig()
 	if err != nil {
 		log.Fatal(err)

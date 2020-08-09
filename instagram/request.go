@@ -28,13 +28,13 @@ var uploadPhotoResponse struct {
 	Status         string      `json:"status"`
 }
 
-type HTTPErrorGeneric struct {
+type HTTPGenericError struct {
 	Message   string `json:"message"`
 	Status    string `json:"status"`
 	ErrorType string `json:"error_type"`
 }
 
-func (e HTTPErrorGeneric) Error() string {
+func (e HTTPGenericError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Status, e.Message)
 }
 
@@ -65,6 +65,18 @@ type ChallengeError struct {
 
 func (e ChallengeError) Error() string {
 	return fmt.Sprintf("%s: %s (%s)", e.Status, e.Message, e.ErrorType)
+}
+
+type LoginRequiredError struct {
+	Message      string `json:"message"`
+	ErrorTitle   string `json:"error_title"`
+	ErrorBody    string `json:"error_body"`
+	LogoutReason int    `json:"logout_reason"`
+	Status       string `json:"status"`
+}
+
+func (e LoginRequiredError) Error() string {
+	return fmt.Sprintf("%s: %s", e.Status, e.Message)
 }
 
 func (i *Instagram) prepareData(other ...map[string]interface{}) (string, error) {
@@ -168,31 +180,49 @@ func (i *Instagram) sendRequest(options *reqOptions) (body []byte, err error) {
 }
 
 func checkError(code int, body []byte) (err error) {
-	switch code {
-	case 200:
-	case 400:
-		httpErr := HTTPError4xx{}
-		err = json.Unmarshal(body, &httpErr)
-		if err != nil {
-			return err
-		}
-
-		if httpErr.Message == "challenge_required" {
-			return httpErr.ChallengeError
-		}
-
-		return httpErr
-	default:
-		httpErr := HTTPErrorGeneric{}
-		err = json.Unmarshal(body, &httpErr)
-		if err != nil {
-			return err
-		}
-
-		return httpErr
+	if code == 200 {
+		return nil
 	}
 
-	return nil
+	switch code {
+	case 400:
+		httpErr := &HTTPGenericError{}
+		err = json.Unmarshal(body, httpErr)
+		if err != nil {
+			return err
+		}
+		if httpErr.Message == "challenge_required" {
+			httpErr := &HTTPError4xx{}
+			err = json.Unmarshal(body, httpErr)
+			if err != nil {
+				return err
+			}
+			return &httpErr.ChallengeError
+		}
+		return httpErr
+	case 402:
+		httpErr := &HTTPGenericError{}
+		err = json.Unmarshal(body, httpErr)
+		if err != nil {
+			return err
+		}
+		if httpErr.Message == "login_required" {
+			httpErr := &LoginRequiredError{}
+			err = json.Unmarshal(body, httpErr)
+			if err != nil {
+				return err
+			}
+			return httpErr
+		}
+		return httpErr
+	default:
+		httpErr := &HTTPGenericError{}
+		err = json.Unmarshal(body, httpErr)
+		if err != nil {
+			return err
+		}
+		return httpErr
+	}
 }
 
 func (i *Instagram) UploadPhoto(photo io.Reader) (string, error) {

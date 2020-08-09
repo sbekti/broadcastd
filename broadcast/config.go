@@ -38,6 +38,7 @@ type Config struct {
 	Encoder  Encoder             `mapstructure:"encoder" yaml:"encoder"`
 	Title    string              `mapstructure:"title" yaml:"title"`
 	IGTV     IGTV                `mapstructure:"igtv" yaml:"igtv"`
+	Notify   bool                `mapstructure:"notify" yaml:"notify"`
 }
 
 type Account struct {

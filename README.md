@@ -22,6 +22,7 @@ docker-compose up --build
 - Add an option to provide own IGTV thumbnail.
 - Post a pinned comment near the 60-min mark to indicate the live will continue after a restart.
 - Make overall code more robust and fault-tolerant.
+- Publish viewer count metrics to Prometheus endpoint.
 
 ## Pull Requests
 Yes please.
