@@ -19,7 +19,7 @@ const (
 	streamHeight         = 1280
 	cooldownDelay        = 30 * time.Second
 	encoderRestartDelay  = 5 * time.Second
-	heartbeatDelay       = 5 * time.Second
+	pollDelay            = 5 * time.Second
 	challengeTimeout     = 2 * time.Minute
 	jpegQuality          = 95
 	numCommentsRequested = 10
@@ -149,22 +149,55 @@ func (s *Stream) loopCycle() {
 		}
 	}
 
-restart:
-	if err := s.streamBroadcast(); err != nil {
-		log.Errorf("stream: %s: unable to stream broadcast %d: %v", s.name, s.broadcastID, err)
+	g, ctx := errgroup.WithContext(s.ctx)
+
+	g.Go(func() error {
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+				if err := s.runEncoder(ctx); err != nil {
+					log.Errorf("stream: %s: unable to stream broadcast %d: %v", s.name, s.broadcastID, err)
+					time.Sleep(encoderRestartDelay)
+				}
+			}
+		}
+	})
+
+	g.Go(func() error {
+		lastCommentTS := 0
+
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(pollDelay):
+				heartbeat, err := s.heartbeatAndStatus()
+				if err != nil {
+					return err
+				}
+				log.Debugf("stream: %s: heartbeat: %+v", s.name, heartbeat)
+
+				newLastCommentTS, err := s.getComments(lastCommentTS)
+				if err != nil {
+					return err
+				}
+				lastCommentTS = newLastCommentTS
+			}
+		}
+	})
+
+	if err := g.Wait(); err != nil {
 		switch err.(type) {
 		case *instagram.LoginRequiredError:
 			s.loginRequired = true
 			return
 		case *broadcastStoppedError:
-			goto end
-		case *processExitedError:
-			time.Sleep(encoderRestartDelay)
-			goto restart
+			break
 		}
 	}
 
-end:
 	s.endBroadcastAndPost()
 }
 
@@ -317,14 +350,11 @@ func (s *Stream) createBroadcast(notify bool) error {
 	s.uploadURL = live.UploadURL
 	s.startTime = time.Now()
 
-	log.Debugf("stream: %s: successfully started broadcast %d", s.name, s.broadcastID)
+	log.Infof("stream: %s: successfully started broadcast %d", s.name, s.broadcastID)
 	return nil
 }
 
-func (s *Stream) streamBroadcast() error {
-	ctx, cancel := context.WithCancel(s.ctx)
-	defer cancel()
-
+func (s *Stream) runEncoder(ctx context.Context) error {
 	var args []string
 	args = append(args, "-i", s.config.InputURL)
 	args = append(args, s.config.Encoder.Args...)
@@ -335,55 +365,21 @@ func (s *Stream) streamBroadcast() error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	g, errCtx := errgroup.WithContext(ctx)
+	log.Debugf("stream: %s: starting encoder process", s.name)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	log.Infof("stream: %s: encoder process started", s.name)
 
-	g.Go(func() error {
-		log.Debugf("stream: %s: starting process", s.name)
-		return cmd.Run()
-	})
-
-	g.Go(func() error {
-		return s.pollStatusAndComments(errCtx)
-	})
-
-	if err := g.Wait(); err != nil {
-		switch err.(type) {
-		case *exec.ExitError:
-			if errors.Is(ctx.Err(), context.Canceled) {
-				log.Debugf("stream: %s: process killed by context cancellation", s.name)
-				return nil
-			}
-			log.Errorf("stream: %s: process has exited and will be restarted", s.name)
-			return &processExitedError{}
-		default:
-			log.Errorf("stream: %s: polling error: %v", s.name, err)
-			return err
+	if err := cmd.Wait(); err != nil {
+		if errors.Is(ctx.Err(), context.Canceled) {
+			log.Debugf("stream: %s: encoder process killed by context cancellation", s.name)
+			return nil
 		}
+		log.Errorf("stream: %s: encoder process error: %v", s.name, err)
+		return err
 	}
 	return nil
-}
-
-func (s *Stream) pollStatusAndComments(ctx context.Context) error {
-	lastCommentTS := 0
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-time.After(heartbeatDelay):
-			heartbeat, err := s.heartbeatAndStatus()
-			if err != nil {
-				return err
-			}
-			log.Debugf("stream: %s: heartbeat: %+v", s.name, heartbeat)
-
-			newLastCommentTS, err := s.getComments(lastCommentTS)
-			if err != nil {
-				return err
-			}
-			lastCommentTS = newLastCommentTS
-		}
-	}
 }
 
 func (s *Stream) heartbeatAndStatus() (*instagram.LiveHeartbeatAndGetViewerCountResponse, error) {
@@ -435,7 +431,7 @@ func (s *Stream) endBroadcast() error {
 		return fmt.Errorf("stream: %s: unable to end broadcast %d: %s", s.name, s.broadcastID, resp.Status)
 	}
 
-	log.Debugf("stream: %s: successfully ended broadcast %d", s.name, s.broadcastID)
+	log.Infof("stream: %s: successfully ended broadcast %d", s.name, s.broadcastID)
 	return nil
 }
 
@@ -450,7 +446,7 @@ func (s *Stream) postToStories() error {
 			s.name, s.broadcastID, resp.Status)
 	}
 
-	log.Debugf("stream: %s: successfully posted broadcast %d to Stories", s.name, s.broadcastID)
+	log.Infof("stream: %s: successfully posted broadcast %d to Stories", s.name, s.broadcastID)
 	return nil
 }
 
@@ -498,7 +494,7 @@ func (s *Stream) postToIGTV() error {
 			s.name, s.broadcastID, igtv.Status)
 	}
 
-	log.Debugf("stream: %s: successfully posted broadcast %d to IGTV with ID: %d",
+	log.Infof("stream: %s: successfully posted broadcast %d to IGTV with ID: %d",
 		s.name, s.broadcastID, igtv.IGTVPostID)
 	return nil
 }

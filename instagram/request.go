@@ -200,7 +200,7 @@ func checkError(code int, body []byte) (err error) {
 			return &httpErr.ChallengeError
 		}
 		return httpErr
-	case 402:
+	case 403:
 		httpErr := &HTTPGenericError{}
 		err = json.Unmarshal(body, httpErr)
 		if err != nil {
