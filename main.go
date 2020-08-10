@@ -1,17 +1,32 @@
 package main
 
 import (
-	"github.com/labstack/gommon/log"
+	"flag"
 	"github.com/sbekti/broadcastd/broadcast"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
 )
 
+const (
+	defaultConfig = "/etc/broadcastd/config.yaml"
+)
+
 func main() {
-	c, err := broadcast.LoadConfig()
+	var configPath string
+	flag.StringVar(&configPath, "c", defaultConfig, "path to config file")
+	flag.Parse()
+
+	c, err := broadcast.LoadConfig(configPath)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	level, err := log.ParseLevel(c.LogLevel)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.SetLevel(level)
 
 	b := broadcast.NewBroadcast(c)
 

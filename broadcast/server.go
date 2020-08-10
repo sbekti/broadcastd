@@ -5,6 +5,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 	"time"
@@ -26,14 +27,16 @@ func NewServer(b *Broadcast, ip string, port int) *Server {
 	e.Logger.SetLevel(log.INFO)
 	e.HideBanner = true
 
+	e.Logger = logrusLogger{Logger: logrus.StandardLogger()}
+	e.Use(loggerHook())
 	e.Use(stateMiddleware(b))
-	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
 	e.GET("/", GetIndex)
 
 	g := e.Group("/api/v1")
 	g.POST("/live", PostLive)
+	g.POST("/security_code", PostSecurityCode)
 
 	return &Server{
 		IP:   ip,

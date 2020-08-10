@@ -1,6 +1,7 @@
 package broadcast
 
 import (
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"time"
@@ -11,6 +12,16 @@ type postLiveReq struct {
 }
 
 type postLiveRes struct {
+	Status string `json:"status"`
+	Error  string `json:"error"`
+}
+
+type postSecurityCodeReq struct {
+	Account      string `json:"account"`
+	SecurityCode string `json:"security_code"`
+}
+
+type postSecurityCodeRes struct {
 	Status string `json:"status"`
 	Error  string `json:"error"`
 }
@@ -42,6 +53,35 @@ func PostLive(c echo.Context) error {
 		})
 	} else {
 		return c.JSON(http.StatusOK, postLiveRes{
+			Status: "ok",
+			Error:  "",
+		})
+	}
+}
+
+func PostSecurityCode(c echo.Context) error {
+	req := new(postSecurityCodeReq)
+	if err := c.Bind(req); err != nil {
+		return err
+	}
+
+	sc := c.(*StateContext)
+
+	if _, ok := sc.streams[req.Account]; !ok {
+		return c.JSON(http.StatusBadRequest, postSecurityCodeRes{
+			Status: "error",
+			Error:  fmt.Sprintf("account %s does not exist", req.Account),
+		})
+	}
+
+	err := sc.streams[req.Account].PutSecurityCode(req.SecurityCode)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, postSecurityCodeRes{
+			Status: "error",
+			Error:  err.Error(),
+		})
+	} else {
+		return c.JSON(http.StatusOK, postSecurityCodeRes{
 			Status: "ok",
 			Error:  "",
 		})

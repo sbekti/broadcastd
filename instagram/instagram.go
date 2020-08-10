@@ -49,7 +49,8 @@ func New(username, password string) *Instagram {
 			Transport: &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 			},
-			Jar: jar,
+			Timeout: httpTimeout,
+			Jar:     jar,
 		},
 	}
 

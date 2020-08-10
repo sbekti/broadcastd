@@ -156,7 +156,7 @@ func (challenge *Challenge) deltaLoginReview() error {
 }
 
 func (challenge *Challenge) Process(apiURL string) error {
-	challenge.client.challengeURL = apiURL[1:]
+	challenge.client.challengeURL = apiURL
 
 	if err := challenge.updateState(); err != nil {
 		return err
@@ -169,5 +169,5 @@ func (challenge *Challenge) Process(apiURL string) error {
 		return challenge.deltaLoginReview()
 	}
 
-	return ChallengeProcessError{StepName: challenge.StepName}
+	return &ChallengeProcessError{StepName: challenge.StepName}
 }

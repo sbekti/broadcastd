@@ -1,9 +1,14 @@
 package broadcast
 
 import (
-	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"os"
+)
+
+const (
+	defaultIGTVMinDuration = 2
+	defaultLogLevel        = "info"
 )
 
 var (
@@ -19,45 +24,43 @@ var (
 )
 
 type Encoder struct {
-	Command string   `mapstructure:"command" yaml:"command"`
-	Args    []string `mapstructure:"args" yaml:"args"`
+	Command string   `yaml:"command"`
+	Args    []string `yaml:"args"`
 }
 
 type IGTV struct {
-	Enabled     bool   `mapstructure:"enabled" yaml:"enabled"`
-	MinDuration int    `mapstructure:"min_duration" yaml:"min_duration"`
-	ShareToFeed bool   `mapstructure:"share_to_feed" yaml:"share_to_feed"`
-	Description string `mapstructure:"description" yaml:"description"`
+	Enabled     bool   `yaml:"enabled"`
+	MinDuration int    `yaml:"min_duration"`
+	ShareToFeed bool   `yaml:"share_to_feed"`
+	Description string `yaml:"description"`
 }
 
 type Config struct {
-	InputURL string              `mapstructure:"input_url" yaml:"input_url"`
-	Accounts map[string]*Account `mapstructure:"accounts" yaml:"accounts"`
-	BindIP   string              `mapstructure:"bind_ip" yaml:"bind_ip"`
-	BindPort int                 `mapstructure:"bind_port" yaml:"bind_port"`
-	Encoder  Encoder             `mapstructure:"encoder" yaml:"encoder"`
-	Title    string              `mapstructure:"title" yaml:"title"`
-	IGTV     IGTV                `mapstructure:"igtv" yaml:"igtv"`
+	InputURL string              `yaml:"input_url"`
+	Accounts map[string]*Account `yaml:"accounts"`
+	BindIP   string              `yaml:"bind_ip"`
+	BindPort int                 `yaml:"bind_port"`
+	Encoder  Encoder             `yaml:"encoder"`
+	Title    string              `yaml:"title"`
+	IGTV     IGTV                `yaml:"igtv"`
+	Notify   bool                `yaml:"notify"`
+	LogLevel string              `yaml:"log_level"`
+	path     string
 }
 
 type Account struct {
-	Password string `mapstructure:"password"`
-	Token    string `mapstructure:"token"`
+	Password string `yaml:"password"`
+	Token    string `yaml:"token"`
 }
 
-func LoadConfig() (*Config, error) {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("/etc/broadcastd/")
-	viper.AddConfigPath("$HOME/.broadcastd")
-	viper.AddConfigPath(".")
-
-	if err := viper.ReadInConfig(); err != nil {
+func LoadConfig(configPath string) (*Config, error) {
+	f, err := ioutil.ReadFile(configPath)
+	if err != nil {
 		return nil, err
 	}
 
-	var config *Config
-	if err := viper.Unmarshal(&config); err != nil {
+	var config Config
+	if err := yaml.Unmarshal(f, &config); err != nil {
 		return nil, err
 	}
 
@@ -69,11 +72,17 @@ func LoadConfig() (*Config, error) {
 		config.Encoder.Args = encoderArgs
 	}
 
-	if config.IGTV.MinDuration < 2 {
-		config.IGTV.MinDuration = 2
+	if config.IGTV.MinDuration < defaultIGTVMinDuration {
+		config.IGTV.MinDuration = defaultIGTVMinDuration
 	}
 
-	return config, nil
+	if config.LogLevel == "" {
+		config.LogLevel = defaultLogLevel
+	}
+
+	config.path = configPath
+
+	return &config, nil
 }
 
 func (c *Config) SaveConfig() error {
@@ -82,7 +91,7 @@ func (c *Config) SaveConfig() error {
 		return err
 	}
 
-	f, err := os.Create(viper.ConfigFileUsed())
+	f, err := os.Create(c.path)
 	if err != nil {
 		return err
 	}

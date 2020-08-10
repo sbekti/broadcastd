@@ -15,13 +15,13 @@ docker-compose up --build
 4. Start streaming and it should appear live on all the accounts.
 
 ## TODOs
-- Handle token expiration mid-broadcast.
-- Handle 2FA security code challenge.
+- Handle 2FA login.
 - Add a dashboard for displaying the overall status.
 - Add a page that displays live comments.
 - Add an option to provide own IGTV thumbnail.
 - Post a pinned comment near the 60-min mark to indicate the live will continue after a restart.
 - Make overall code more robust and fault-tolerant.
+- Publish viewer count metrics to Prometheus endpoint.
 
 ## Pull Requests
 Yes please.
