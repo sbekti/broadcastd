@@ -5,8 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/labstack/gommon/log"
 	"github.com/sbekti/broadcastd/instagram"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"os"
 	"os/exec"
@@ -50,12 +50,6 @@ func (e broadcastStoppedError) Error() string {
 	return fmt.Sprintf("broadcast %d has stopped", e.broadcastID)
 }
 
-type processExitedError struct{}
-
-func (e processExitedError) Error() string {
-	return fmt.Sprintf("encoder has exited")
-}
-
 func NewStream(name string, config *Config) *Stream {
 	var s = &Stream{
 		name:          name,
@@ -92,8 +86,9 @@ func (s *Stream) Stop() error {
 	s.streamingMux.Lock()
 	defer s.streamingMux.Unlock()
 
+	s.cancel()
+
 	if s.streaming {
-		s.cancel()
 		s.streaming = false
 		return <-s.done
 	}
@@ -221,7 +216,12 @@ func (s *Stream) endBroadcastAndPost() {
 
 func (s *Stream) cooldown() {
 	log.Debugf("stream: %s: cooling down...", s.name)
-	time.Sleep(cooldownDelay)
+	select {
+	case <-s.ctx.Done():
+		break
+	case <-time.After(cooldownDelay):
+		break
+	}
 }
 
 func (s *Stream) login() error {
@@ -229,24 +229,36 @@ func (s *Stream) login() error {
 	token := s.config.Accounts[username].Token
 	password := s.config.Accounts[username].Password
 
-	i, err := s.loginByToken(username, token)
-	if err == nil {
-		s.instagram = i
-		return nil
+	if token != "" {
+		// Try to login using an existing token.
+		i, err := s.loginByToken(username, token)
+		if err == nil {
+			s.instagram = i
+			return nil
+		}
+
+		// Login by token is not successful.
+		log.Error(err)
+		log.Warnf("stream: %s: retrying login using password", username)
 	}
 
-	log.Error(err)
-	log.Warnf("stream: %s: retrying login using password", username)
+	// Try to login using username and password.
+	i, err := s.loginByPassword(username, password)
 
-	i, err = s.loginByPassword(username, password)
+	// Login by password may require a challenge.
+	// Setting the client here so that in case a challenge is required,
+	// the challenge can be responded using the client.
+	s.instagram = i
+
+	// No challenge is required, login is successful.
 	if err == nil {
-		s.instagram = i
 		if err := s.persistToken(); err != nil {
 			return err
 		}
 		return nil
 	}
 
+	// Challenge is required or other error occured.
 	return err
 }
 
@@ -265,7 +277,7 @@ func (s *Stream) loginByPassword(username string, password string) (*instagram.I
 	log.Debugf("stream: %s: logging in by password", s.name)
 	i := instagram.New(username, password)
 	if err := i.Login(); err != nil {
-		return nil, err
+		return i, err
 	}
 
 	log.Debugf("stream: %s: successfully logged in by password", s.name)
@@ -496,5 +508,13 @@ func (s *Stream) postToIGTV() error {
 
 	log.Infof("stream: %s: successfully posted broadcast %d to IGTV with ID: %d",
 		s.name, s.broadcastID, igtv.IGTVPostID)
+	return nil
+}
+
+func (s *Stream) PutSecurityCode(code string) error {
+	select {
+	case s.securityCode <- code:
+	default:
+	}
 	return nil
 }

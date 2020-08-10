@@ -3,9 +3,16 @@
 input_url: 'rtmp://ingestd/live/test'
 
 # [REQUIRED] Specify your accounts and their passwords below.
+# You can specify multiple accounts like this:
+#
+# accounts:
+#   account1:
+#     password: 'password1'
+#   account2:
+#     password: 'password2'
 accounts:
   # Change this to your own account.
-  my_account:
+  change_me:
     password: ''
 
 # Encoder (ffmpeg) settings. If not specified, the below defaults will be used.
@@ -37,10 +44,13 @@ igtv:
   # If the live duration is shorter than the below value, the live will
   # not be saved to IGTV. Value is in minutes and cannot be less than 2.
   # Default: 2
-  min_duration: 5
+  min_duration: 2
 
   # Share IGTV video to feed. Default: false
   share_to_feed: true
 
   # The description to be put in the IGTV video. Default: ''
   description: ''
+
+# Log level can be set to 'debug', 'info', 'warn', and 'error'. Default: 'info'
+log_level: 'info'

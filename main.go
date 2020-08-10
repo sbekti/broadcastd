@@ -1,30 +1,32 @@
 package main
 
 import (
-	"fmt"
-	"github.com/labstack/gommon/log"
+	"flag"
 	"github.com/sbekti/broadcastd/broadcast"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
-	"runtime"
-	"time"
+)
+
+const (
+	defaultConfig = "/etc/broadcastd/config.yaml"
 )
 
 func main() {
-	// TODO: Make log level configurable.
-	log.SetLevel(log.DEBUG)
+	var configPath string
+	flag.StringVar(&configPath, "c", defaultConfig, "path to config file")
+	flag.Parse()
 
-	go func() {
-		for {
-			fmt.Printf("GOROUTINES: %d\n", runtime.NumGoroutine())
-			time.Sleep(3 * time.Second)
-		}
-	}()
-
-	c, err := broadcast.LoadConfig()
+	c, err := broadcast.LoadConfig(configPath)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	level, err := log.ParseLevel(c.LogLevel)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.SetLevel(level)
 
 	b := broadcast.NewBroadcast(c)
 

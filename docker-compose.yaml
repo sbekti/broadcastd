@@ -11,4 +11,4 @@ services:
     ports:
       - '3000:3000'
     volumes:
-      - ./config.yaml:/config.yaml
+      - ./config.yaml:/etc/broadcastd/config.yaml
