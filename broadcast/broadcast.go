@@ -3,28 +3,47 @@ package broadcast
 import (
 	"context"
 	"fmt"
+	"github.com/ReneKroon/ttlcache/v2"
+	"github.com/sbekti/broadcastd/instagram"
+	"golang.org/x/net/websocket"
 	"golang.org/x/sync/errgroup"
+	"strconv"
 	"sync"
+	"time"
+)
+
+const (
+	cacheTTL = 60 * time.Second
 )
 
 type Broadcast struct {
 	streaming    bool
-	streamingMux sync.Mutex
+	streamingMux sync.RWMutex
 
 	config  *Config
 	server  *Server
 	streams map[string]*Stream
+
+	connections    map[*websocket.Conn]struct{}
+	connectionsMux sync.RWMutex
+
+	commentsCache *ttlcache.Cache
 }
 
 func NewBroadcast(c *Config) *Broadcast {
+	cache := ttlcache.NewCache()
+	cache.SetTTL(cacheTTL)
+
 	b := &Broadcast{
-		config:  c,
-		streams: make(map[string]*Stream),
+		config:        c,
+		streams:       make(map[string]*Stream),
+		connections:   make(map[*websocket.Conn]struct{}),
+		commentsCache: cache,
 	}
 	b.server = NewServer(b, c.BindIP, c.BindPort)
 
 	for name := range c.Accounts {
-		b.streams[name] = NewStream(name, b.config)
+		b.streams[name] = NewStream(name, b.config, b)
 	}
 
 	return b
@@ -100,5 +119,28 @@ func (b *Broadcast) StopStreams() error {
 	}
 
 	b.streaming = false
+	return nil
+}
+
+func (b *Broadcast) broadcastComment(comment instagram.LiveComment) error {
+	cacheKey := strconv.FormatInt(comment.PK, 10)
+	if _, err := b.commentsCache.Get(cacheKey); err == nil {
+		// Comment already exists, skip processing.
+		return nil
+	}
+
+	// Mark the comment as seen.
+	if err := b.commentsCache.Set(cacheKey, true); err != nil {
+		return err
+	}
+
+	b.connectionsMux.RLock()
+	defer b.connectionsMux.RUnlock()
+
+	for c := range b.connections {
+		if err := websocket.JSON.Send(c, comment); err != nil {
+			return err
+		}
+	}
 	return nil
 }

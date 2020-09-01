@@ -1,0 +1,18 @@
+{{define "security_code"}}
+{{template "header"}}
+<main role="main" class="container">
+    <h1>Security Code</h1>
+
+    <form action="/{{.Account}}/security_code" method="post">
+        <div class="form-group">
+            <label for="security_code">Security code for {{.Account}}</label>
+            <input type="text" class="form-control" name="security_code" id="security_code">
+        </div>
+        <div class="form-group">
+            <input type="hidden" class="form-control" name="account" id="account" value="{{.Account}}">
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+</main>
+{{template "footer"}}
+{{end}}

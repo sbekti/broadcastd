@@ -35,6 +35,7 @@ FROM jrottenberg/ffmpeg:4.3.1-alpine38
 
 # Copy the main binary
 COPY --from=build /dist/main /broadcastd
+COPY --from=build /build/public ./public
 
 # Command to run
 ENTRYPOINT ["/broadcastd"]

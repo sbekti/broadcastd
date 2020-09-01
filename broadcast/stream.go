@@ -15,14 +15,22 @@ import (
 )
 
 const (
-	streamWidth          = 720
-	streamHeight         = 1280
 	cooldownDelay        = 30 * time.Second
 	encoderRestartDelay  = 5 * time.Second
-	pollDelay            = 5 * time.Second
 	challengeTimeout     = 2 * time.Minute
 	jpegQuality          = 95
 	numCommentsRequested = 10
+
+	ready                = "Ready"
+	loggingIn            = "Logging in"
+	loginError           = "Login error"
+	challengeRequired    = "Challenge required"
+	challengeError       = "Challenge error"
+	creatingBroadcast    = "Creating broadcast"
+	createBroadcastError = "Create broadcast error"
+	streaming            = "Streaming"
+	encoderRestart       = "Encoder restart"
+	posting              = "Posting"
 )
 
 type Stream struct {
@@ -40,6 +48,8 @@ type Stream struct {
 	loginRequired bool
 	streaming     bool
 	streamingMux  sync.Mutex
+	status        string
+	broadcast     *Broadcast
 }
 
 type broadcastStoppedError struct {
@@ -50,7 +60,7 @@ func (e broadcastStoppedError) Error() string {
 	return fmt.Sprintf("broadcast %d has stopped", e.broadcastID)
 }
 
-func NewStream(name string, config *Config) *Stream {
+func NewStream(name string, config *Config, broadcast *Broadcast) *Stream {
 	var s = &Stream{
 		name:          name,
 		config:        config,
@@ -61,9 +71,13 @@ func NewStream(name string, config *Config) *Stream {
 		securityCode:  make(chan string),
 		ctx:           nil,
 		cancel:        nil,
-		done:          make(chan error, 1),
+		done:          make(chan error),
 		startTime:     time.Time{},
 		loginRequired: true,
+		streaming:     false,
+		streamingMux:  sync.Mutex{},
+		status:        ready,
+		broadcast:     broadcast,
 	}
 
 	return s
@@ -101,6 +115,7 @@ func (s *Stream) eventLoop() {
 		select {
 		case <-s.ctx.Done():
 			s.done <- nil
+			s.status = ready
 			return
 		default:
 			s.loopCycle()
@@ -110,20 +125,25 @@ func (s *Stream) eventLoop() {
 
 func (s *Stream) loopCycle() {
 	if s.loginRequired {
+		s.status = loggingIn
+
 		if err := s.login(); err != nil {
 			switch err := err.(type) {
 			case *instagram.ChallengeError:
 				log.Warnf("stream: %s: challenge code is required", s.name)
 				s.apiPath = err.Challenge.APIPath
+				s.status = challengeRequired
 
 				if err := s.respondChallenge(); err != nil {
 					log.Errorf("stream: %s: unable to complete challenge: %v", s.name, err)
+					s.status = challengeError
 					s.cooldown()
 					return
 				}
 			default:
 				log.Errorf("stream: %s: unable to login: %v", s.name, err)
 				s.cooldown()
+				s.status = loginError
 				return
 			}
 		}
@@ -132,6 +152,7 @@ func (s *Stream) loopCycle() {
 		s.loginRequired = false
 	}
 
+	s.status = creatingBroadcast
 	if err := s.createBroadcast(s.config.Notify); err != nil {
 		log.Errorf("stream: %s: unable to create broadcast: %v", s.name, err)
 		switch err.(type) {
@@ -139,6 +160,7 @@ func (s *Stream) loopCycle() {
 			s.loginRequired = true
 			return
 		default:
+			s.status = createBroadcastError
 			s.cooldown()
 			return
 		}
@@ -152,8 +174,11 @@ func (s *Stream) loopCycle() {
 			case <-ctx.Done():
 				return nil
 			default:
+				s.status = streaming
+
 				if err := s.runEncoder(ctx); err != nil {
 					log.Errorf("stream: %s: unable to stream broadcast %d: %v", s.name, s.broadcastID, err)
+					s.status = encoderRestart
 					time.Sleep(encoderRestartDelay)
 				}
 			}
@@ -167,7 +192,7 @@ func (s *Stream) loopCycle() {
 			select {
 			case <-ctx.Done():
 				return nil
-			case <-time.After(pollDelay):
+			case <-time.After(time.Duration(s.config.PollInterval) * time.Second):
 				heartbeat, err := s.heartbeatAndStatus()
 				if err != nil {
 					return err
@@ -193,6 +218,7 @@ func (s *Stream) loopCycle() {
 		}
 	}
 
+	s.status = posting
 	s.endBroadcastAndPost()
 }
 
@@ -330,7 +356,7 @@ func (s *Stream) persistToken() error {
 
 func (s *Stream) createBroadcast(notify bool) error {
 	log.Debugf("stream: %s: creating broadcast", s.name)
-	live, err := s.instagram.Live.Create(streamWidth, streamHeight, s.config.Title)
+	live, err := s.instagram.Live.Create(s.config.Encoder.Width, s.config.Encoder.Height, s.config.Title)
 	if err != nil {
 		return err
 	}
@@ -426,6 +452,12 @@ func (s *Stream) getComments(lastCommentTS int) (int, error) {
 		log.Debugf("stream: %s: comment %d at %d from %s: %s",
 			s.name, comment.PK, comment.CreatedAt, comment.User.Username, comment.Text)
 
+		if err := s.broadcast.broadcastComment(comment); err != nil {
+			log.Error(err)
+			log.Debugf("%+v", comment)
+			log.Errorf("stream: %s: %v", s.name, err)
+		}
+
 		if comment.CreatedAt > newLastCommentTS {
 			newLastCommentTS = comment.CreatedAt
 		}
@@ -516,5 +548,6 @@ func (s *Stream) PutSecurityCode(code string) error {
 	case s.securityCode <- code:
 	default:
 	}
+	log.Infof("stream: sent security code %s for %s", code, s.name)
 	return nil
 }

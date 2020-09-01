@@ -65,42 +65,44 @@ type LiveHeartbeatAndGetViewerCountResponse struct {
 }
 
 type LiveGetCommentResponse struct {
-	CommentLikesEnabled bool `json:"comment_likes_enabled"`
-	Comments            []struct {
-		PK              int64  `json:"pk"`
-		UserID          int    `json:"user_id"`
-		Text            string `json:"text"`
-		Type            int    `json:"type"`
-		CreatedAt       int    `json:"created_at"`
-		CreatedAtUtc    int    `json:"created_at_utc"`
-		ContentType     string `json:"content_type"`
-		Status          string `json:"status"`
-		BitFlags        int    `json:"bit_flags"`
-		DidReportAsSpam bool   `json:"did_report_as_spam"`
-		ShareEnabled    bool   `json:"share_enabled"`
-		User            struct {
-			PK                  int64  `json:"pk"`
-			Username            string `json:"username"`
-			FullName            string `json:"full_name"`
-			IsPrivate           bool   `json:"is_private"`
-			ProfilePicURL       string `json:"profile_pic_url"`
-			ProfilePicID        string `json:"profile_pic_id"`
-			IsVerified          bool   `json:"is_verified"`
-			LiveWithEligibility string `json:"live_with_eligibility"`
-		} `json:"user"`
-	} `json:"comments"`
-	CommentCount               int         `json:"comment_count"`
-	Caption                    interface{} `json:"caption"`
-	CaptionIsEdited            bool        `json:"caption_is_edited"`
-	HasMoreComments            bool        `json:"has_more_comments"`
-	HasMoreHeadloadComments    bool        `json:"has_more_headload_comments"`
-	MediaHeaderDisplay         string      `json:"media_header_display"`
-	CanViewMorePreviewComments bool        `json:"can_view_more_preview_comments"`
-	LiveSecondsPerComment      int         `json:"live_seconds_per_comment"`
-	IsFirstFetch               string      `json:"is_first_fetch"`
-	SystemComments             interface{} `json:"system_comments"`
-	CommentMuted               int         `json:"comment_muted"`
-	Status                     string      `json:"status"`
+	CommentLikesEnabled        bool          `json:"comment_likes_enabled"`
+	Comments                   []LiveComment `json:"comments"`
+	CommentCount               int           `json:"comment_count"`
+	Caption                    interface{}   `json:"caption"`
+	CaptionIsEdited            bool          `json:"caption_is_edited"`
+	HasMoreComments            bool          `json:"has_more_comments"`
+	HasMoreHeadloadComments    bool          `json:"has_more_headload_comments"`
+	MediaHeaderDisplay         string        `json:"media_header_display"`
+	CanViewMorePreviewComments bool          `json:"can_view_more_preview_comments"`
+	LiveSecondsPerComment      int           `json:"live_seconds_per_comment"`
+	IsFirstFetch               string        `json:"is_first_fetch"`
+	SystemComments             interface{}   `json:"system_comments"`
+	CommentMuted               int           `json:"comment_muted"`
+	Status                     string        `json:"status"`
+}
+
+type LiveComment struct {
+	PK              int64  `json:"pk"`
+	UserID          int    `json:"user_id"`
+	Text            string `json:"text"`
+	Type            int    `json:"type"`
+	CreatedAt       int    `json:"created_at"`
+	CreatedAtUtc    int    `json:"created_at_utc"`
+	ContentType     string `json:"content_type"`
+	Status          string `json:"status"`
+	BitFlags        int    `json:"bit_flags"`
+	DidReportAsSpam bool   `json:"did_report_as_spam"`
+	ShareEnabled    bool   `json:"share_enabled"`
+	User            struct {
+		PK                  int64  `json:"pk"`
+		Username            string `json:"username"`
+		FullName            string `json:"full_name"`
+		IsPrivate           bool   `json:"is_private"`
+		ProfilePicURL       string `json:"profile_pic_url"`
+		ProfilePicID        string `json:"profile_pic_id"`
+		IsVerified          bool   `json:"is_verified"`
+		LiveWithEligibility string `json:"live_with_eligibility"`
+	} `json:"user"`
 }
 
 type LiveGetPostLiveThumbnailsResponse struct {
