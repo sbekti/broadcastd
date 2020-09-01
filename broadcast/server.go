@@ -6,6 +6,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
 	"github.com/sirupsen/logrus"
+	"html/template"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -22,6 +24,14 @@ type Server struct {
 	e    *echo.Echo
 }
 
+type Template struct {
+	templates *template.Template
+}
+
+func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	return t.templates.ExecuteTemplate(w, name, data)
+}
+
 func NewServer(b *Broadcast, ip string, port int) *Server {
 	e := echo.New()
 	e.Logger.SetLevel(log.INFO)
@@ -32,11 +42,22 @@ func NewServer(b *Broadcast, ip string, port int) *Server {
 	e.Use(stateMiddleware(b))
 	e.Use(middleware.Recover())
 
+	assetHandler := http.FileServer(http.Dir("public/static"))
+	e.GET("/static/*", echo.WrapHandler(http.StripPrefix("/static/", assetHandler)))
+
+	t := &Template{
+		templates: template.Must(template.ParseGlob("public/views/*.html")),
+	}
+	e.Renderer = t
+
 	e.GET("/", GetIndex)
+	e.GET("/:account/security_code", GetSecurityCode)
+	e.POST("/:account/security_code", PostSecurityCode)
+	e.GET("/comments", GetComments)
+	e.GET("/ws/comments", WebSocketComments)
 
 	g := e.Group("/api/v1")
 	g.POST("/live", PostLive)
-	g.POST("/security_code", PostSecurityCode)
 
 	return &Server{
 		IP:   ip,

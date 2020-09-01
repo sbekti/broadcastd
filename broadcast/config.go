@@ -9,6 +9,9 @@ import (
 const (
 	defaultIGTVMinDuration = 2
 	defaultLogLevel        = "info"
+	defaultHeight          = 1280
+	defaultWidth           = 720
+	defaultPollInterval    = 2
 )
 
 var (
@@ -26,6 +29,8 @@ var (
 type Encoder struct {
 	Command string   `yaml:"command"`
 	Args    []string `yaml:"args"`
+	Height  int      `yaml:"height"`
+	Width   int      `yaml:"width"`
 }
 
 type IGTV struct {
@@ -36,16 +41,17 @@ type IGTV struct {
 }
 
 type Config struct {
-	InputURL string              `yaml:"input_url"`
-	Accounts map[string]*Account `yaml:"accounts"`
-	BindIP   string              `yaml:"bind_ip"`
-	BindPort int                 `yaml:"bind_port"`
-	Encoder  Encoder             `yaml:"encoder"`
-	Title    string              `yaml:"title"`
-	IGTV     IGTV                `yaml:"igtv"`
-	Notify   bool                `yaml:"notify"`
-	LogLevel string              `yaml:"log_level"`
-	path     string
+	InputURL     string              `yaml:"input_url"`
+	Accounts     map[string]*Account `yaml:"accounts"`
+	BindIP       string              `yaml:"bind_ip"`
+	BindPort     int                 `yaml:"bind_port"`
+	Encoder      Encoder             `yaml:"encoder"`
+	Title        string              `yaml:"title"`
+	IGTV         IGTV                `yaml:"igtv"`
+	Notify       bool                `yaml:"notify"`
+	LogLevel     string              `yaml:"log_level"`
+	PollInterval int                 `yaml:"poll_interval"`
+	path         string
 }
 
 type Account struct {
@@ -72,8 +78,20 @@ func LoadConfig(configPath string) (*Config, error) {
 		config.Encoder.Args = encoderArgs
 	}
 
+	if config.Encoder.Height == 0 {
+		config.Encoder.Height = defaultHeight
+	}
+
+	if config.Encoder.Width == 0 {
+		config.Encoder.Width = defaultWidth
+	}
+
 	if config.IGTV.MinDuration < defaultIGTVMinDuration {
 		config.IGTV.MinDuration = defaultIGTVMinDuration
+	}
+
+	if config.PollInterval == 0 {
+		config.PollInterval = defaultPollInterval
 	}
 
 	if config.LogLevel == "" {

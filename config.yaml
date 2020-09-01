@@ -20,6 +20,8 @@ accounts:
 # encoder:
 #   path: '/usr/local/bin/ffmpeg'
 #   args: ['-analyzeduration', '20M', '-probesize', '20M', '-c', 'copy', '-bufsize', '4096k', '-max_muxing_queue_size', '1024', '-loglevel', 'error']
+#   height: 1280
+#   width: 720
 
 # The IP for the HTTP server to bind to. Default: '' (0.0.0.0)
 bind_ip: ''
@@ -51,6 +53,9 @@ igtv:
 
   # The description to be put in the IGTV video. Default: ''
   description: ''
+
+# The time interval in seconds for getting live comments. Default: 2
+poll_interval: 2
 
 # Log level can be set to 'debug', 'info', 'warn', and 'error'. Default: 'info'
 log_level: 'info'

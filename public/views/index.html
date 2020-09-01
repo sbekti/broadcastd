@@ -1,0 +1,33 @@
+{{define "index"}}
+{{template "header"}}
+<main role="main" class="container">
+    <h1>Dashboard</h1>
+
+    <h2 class="mt-4">Status:
+    {{if .Input.Live}}
+    <span class="badge badge-danger">Live</span>
+    {{else}}
+    <span class="badge badge-success">Ready</span>
+    {{end}}
+    </h2>
+
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th scope="col">Account</th>
+                <th scope="col">Status</th>
+                <th scope="col">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {{range $output := .Outputs}}
+            <tr>
+                <td>{{$output.Name}}</td>
+                <td>{{$output.Status}}</td>
+                <td>{{if $output.ChallengeRequired}}<a href="/{{$output.Name}}/security_code">Enter code</a>{{end}}</td>
+            </tr>
+        {{end}}
+    </table>
+</main>
+{{template "footer"}}
+{{end}}
