@@ -1,0 +1,60 @@
+{{define "comments"}}
+{{template "header_comments"}}
+<main role="main" class="container-fluid">
+    <div id="comments-view">
+        <div v-for="comment in comments">
+            <div class="media comment">
+                <img class="mr-3 comment-pic" v-bind:src="{{ "comment.user.profile_pic_url" }}" v-bind:alt="{{ "comment.user.username" }}">
+                <div class="media-body">
+                    <h5 class="mt-0 comment-user">{{ "{{ comment.user.username }}" }}</h5>
+                    <span class="comment-text">{{ "{{ comment.text }}" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<script type="application/javascript">
+    let commentsView = new Vue({
+        el: '#comments-view',
+        data: {
+            comments: []
+        }
+    });
+
+    function connect() {
+        const loc = window.location;
+        let uri = 'ws:';
+
+        if (loc.protocol === 'https:') {
+            uri = 'wss:';
+        }
+        uri += '//' + loc.host + '/ws/comments';
+
+        let ws = new WebSocket(uri);
+
+        ws.onopen = function() {
+            console.log('websocket: connected to server');
+        };
+
+        ws.onmessage = function(e) {
+            const parsedData = JSON.parse(e.data)
+            commentsView.comments.unshift(parsedData);
+        };
+
+        ws.onclose = function(e) {
+            console.log('websocket: socket is closed. reconnect will be attempted in 5 seconds.', e.reason);
+            setTimeout(function() {
+                connect();
+            }, 5000);
+        };
+
+        ws.onerror = function(e) {
+            console.log('websocket: socket encountered error: ', e.message);
+            ws.close();
+        };
+    }
+
+    connect();
+</script>
+{{template "footer"}}
+{{end}}
