@@ -31,7 +31,7 @@ jobs:
     - name: Prepare
       id: prepare
       run: |
-        DOCKER_IMAGE=shbekti/broadcastdd
+        DOCKER_IMAGE=shbekti/broadcastd
         DOCKER_PLATFORMS=linux/amd64,linux/arm/v7,linux/arm64,linux/386
         VERSION=edge
         if [[ $GITHUB_REF == refs/tags/* ]]; then
