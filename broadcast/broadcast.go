@@ -1,6 +1,7 @@
 package broadcast
 
 import (
+	"container/list"
 	"context"
 	"fmt"
 	"github.com/ReneKroon/ttlcache/v2"
@@ -13,7 +14,8 @@ import (
 )
 
 const (
-	cacheTTL = 60 * time.Second
+	cacheTTL          = 60 * time.Second
+	maxRecentComments = 100
 )
 
 type Broadcast struct {
@@ -27,7 +29,8 @@ type Broadcast struct {
 	connections    map[*websocket.Conn]struct{}
 	connectionsMux sync.RWMutex
 
-	commentsCache *ttlcache.Cache
+	commentsCache  *ttlcache.Cache
+	recentComments *list.List
 }
 
 func NewBroadcast(c *Config) *Broadcast {
@@ -35,10 +38,11 @@ func NewBroadcast(c *Config) *Broadcast {
 	cache.SetTTL(cacheTTL)
 
 	b := &Broadcast{
-		config:        c,
-		streams:       make(map[string]*Stream),
-		connections:   make(map[*websocket.Conn]struct{}),
-		commentsCache: cache,
+		config:         c,
+		streams:        make(map[string]*Stream),
+		connections:    make(map[*websocket.Conn]struct{}),
+		commentsCache:  cache,
+		recentComments: list.New(),
 	}
 	b.server = NewServer(b, c.BindIP, c.BindPort)
 
@@ -133,6 +137,11 @@ func (b *Broadcast) broadcastComment(comment instagram.LiveComment) error {
 	if err := b.commentsCache.Set(cacheKey, true); err != nil {
 		return err
 	}
+
+	if b.recentComments.Len() > maxRecentComments {
+		b.recentComments.Remove(b.recentComments.Front())
+	}
+	b.recentComments.PushBack(comment)
 
 	b.connectionsMux.RLock()
 	defer b.connectionsMux.RUnlock()

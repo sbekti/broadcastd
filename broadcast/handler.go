@@ -124,6 +124,12 @@ func WebSocketComments(c echo.Context) error {
 		sc.connections[ws] = struct{}{}
 		sc.connectionsMux.Unlock()
 
+		for e := sc.Broadcast.recentComments.Front(); e != nil; e = e.Next() {
+			if err := websocket.JSON.Send(ws, e.Value); err != nil {
+				log.Errorf("ws: send: %v", err)
+			}
+		}
+
 		msg := ""
 		for {
 			if err := websocket.Message.Receive(ws, &msg); err != nil {
