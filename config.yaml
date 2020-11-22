@@ -59,3 +59,14 @@ poll_interval: 2
 
 # Log level can be set to 'debug', 'info', 'warn', and 'error'. Default: 'info'
 log_level: 'info'
+
+# Settings for logging.
+logging:
+  # Sets whether logging is enabled.
+  enabled: true
+
+  # Sets the path for the viewer log file.
+  viewer_log_file: /var/log/broadcastd/viewers.csv
+
+  # Sets the path for the comment log file.
+  comment_log_file: /var/log/broadcastd/comments.csv

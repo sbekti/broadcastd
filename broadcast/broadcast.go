@@ -3,11 +3,14 @@ package broadcast
 import (
 	"container/list"
 	"context"
+	"encoding/csv"
 	"fmt"
 	"github.com/ReneKroon/ttlcache/v2"
 	"github.com/sbekti/broadcastd/instagram"
 	"golang.org/x/net/websocket"
 	"golang.org/x/sync/errgroup"
+	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -126,11 +129,18 @@ func (b *Broadcast) StopStreams() error {
 	return nil
 }
 
-func (b *Broadcast) broadcastComment(comment instagram.LiveComment) error {
+func (b *Broadcast) broadcastComment(streamName string, comment instagram.LiveComment) error {
 	cacheKey := strconv.FormatInt(comment.PK, 10)
 	if _, err := b.commentsCache.Get(cacheKey); err == nil {
 		// Comment already exists, skip processing.
 		return nil
+	}
+
+	if b.config.Logging.Enabled {
+		err := b.writeCommentLog(int64(comment.CreatedAt), streamName, comment.User.Username, comment.Text)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Mark the comment as seen.
@@ -151,5 +161,54 @@ func (b *Broadcast) broadcastComment(comment instagram.LiveComment) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (b *Broadcast) writeViewerLog(timestamp int64, username string, viewerCount int,
+	totalUniqueViewerCount int) error {
+
+	logFilePath := b.config.Logging.ViewerLogFile
+	if err := os.MkdirAll(filepath.Dir(logFilePath), os.ModePerm); err != nil {
+		return err
+	}
+
+	f, err := os.OpenFile(logFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		return err
+	}
+
+	w := csv.NewWriter(f)
+	err = w.Write([]string{
+		strconv.FormatInt(timestamp, 10),
+		username,
+		strconv.Itoa(viewerCount),
+		strconv.Itoa(totalUniqueViewerCount),
+	})
+	if err != nil {
+		return err
+	}
+
+	w.Flush()
+	return nil
+}
+
+func (b *Broadcast) writeCommentLog(timestamp int64, username string, commenter string, comment string) error {
+	logFilePath := b.config.Logging.CommentLogFile
+	if err := os.MkdirAll(filepath.Dir(logFilePath), os.ModePerm); err != nil {
+		return err
+	}
+
+	f, err := os.OpenFile(logFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		return err
+	}
+
+	w := csv.NewWriter(f)
+	err = w.Write([]string{strconv.FormatInt(timestamp, 10), username, commenter, comment})
+	if err != nil {
+		return err
+	}
+
+	w.Flush()
 	return nil
 }

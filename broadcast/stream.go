@@ -199,6 +199,14 @@ func (s *Stream) loopCycle() {
 				}
 				log.Debugf("stream: %s: heartbeat: %+v", s.name, heartbeat)
 
+				if s.config.Logging.Enabled {
+					currentTime := time.Now().Unix()
+					if err := s.broadcast.writeViewerLog(currentTime, s.name, int(heartbeat.ViewerCount),
+						heartbeat.TotalUniqueViewerCount); err != nil {
+						log.Errorf("stream: %s: unable to write viewer log: %v", s.name, err)
+					}
+				}
+
 				newLastCommentTS, err := s.getComments(lastCommentTS)
 				if err != nil {
 					return err
@@ -447,7 +455,7 @@ func (s *Stream) getComments(lastCommentTS int) (int, error) {
 		log.Debugf("stream: %s: comment %d at %d from %s: %s",
 			s.name, comment.PK, comment.CreatedAt, comment.User.Username, comment.Text)
 
-		if err := s.broadcast.broadcastComment(comment); err != nil {
+		if err := s.broadcast.broadcastComment(s.name, comment); err != nil {
 			log.Error(err)
 			log.Debugf("%+v", comment)
 			log.Errorf("stream: %s: %v", s.name, err)
