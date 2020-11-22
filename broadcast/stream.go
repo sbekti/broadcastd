@@ -233,11 +233,6 @@ func (s *Stream) endBroadcastAndPost() {
 			log.Errorf("stream: %s: unable to post to IGTV: %v", s.name, err)
 		}
 	}
-
-	if err := s.postToStories(); err != nil {
-		log.Errorf("stream: %s: unable to post to Stories: %v", s.name, err)
-		return
-	}
 }
 
 func (s *Stream) cooldown() {
@@ -476,21 +471,6 @@ func (s *Stream) endBroadcast() error {
 	}
 
 	log.Infof("stream: %s: successfully ended broadcast %d", s.name, s.broadcastID)
-	return nil
-}
-
-func (s *Stream) postToStories() error {
-	log.Debugf("stream: %s: posting broadcast %d to Stories", s.name, s.broadcastID)
-	resp, err := s.instagram.Live.AddToPostLive(s.broadcastID)
-	if err != nil {
-		return err
-	}
-	if resp.Status != "ok" {
-		return fmt.Errorf("stream: %s: unable to post broadcast %d to Stories: %s",
-			s.name, s.broadcastID, resp.Status)
-	}
-
-	log.Infof("stream: %s: successfully posted broadcast %d to Stories", s.name, s.broadcastID)
 	return nil
 }
 

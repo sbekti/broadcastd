@@ -28,7 +28,6 @@ const (
 	igAPILiveStart                      = "/live/%d/start/"
 	igAPILiveEnd                        = "/live/%d/end_broadcast/"
 	igAPILiveInfo                       = "/live/%d/info/"
-	igAPILiveAddToPost                  = "/live/%d/add_to_post_live/"
 	igAPILiveUnmuteComment              = "/live/%d/unmute_comment/"
 	igAPILiveGetComment                 = "/live/%d/get_comment/"
 	igAPILiveHeartbeatAndGetViewerCount = "/live/%d/heartbeat_and_get_viewer_count/"

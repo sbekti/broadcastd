@@ -216,36 +216,6 @@ func (live *Live) End(broadcastID int, endAfterCopyrightWarning bool) (*LiveEndR
 	return res, nil
 }
 
-func (live *Live) AddToPostLive(broadcastID int) (*LiveAddToPostResponse, error) {
-	client := live.client
-
-	data, err := client.prepareData(
-		map[string]interface{}{},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	body, err := client.sendRequest(
-		&reqOptions{
-			Endpoint: fmt.Sprintf(igAPILiveAddToPost, broadcastID),
-			IsPost:   true,
-			Query:    generateSignature(data),
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	res := &LiveAddToPostResponse{}
-	err = json.Unmarshal(body, res)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
 func (live *Live) Info(broadcastID int) (*LiveInfoResponse, error) {
 	client := live.client
 
