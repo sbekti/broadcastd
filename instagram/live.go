@@ -116,6 +116,22 @@ type LiveAddPostLiveToIGTVResponse struct {
 	Status     string `json:"status"`
 }
 
+type LiveGetFinalViewerListResponse struct {
+	Users                  []LiveViewerUser `json:"users"`
+	TotalUniqueViewerCount int              `json:"total_unique_viewer_count"`
+	Status                 string           `json:"status"`
+}
+
+type LiveViewerUser struct {
+	PK            int64  `json:"pk"`
+	Username      string `json:"username"`
+	FullName      string `json:"full_name"`
+	IsPrivate     bool   `json:"is_private"`
+	ProfilePicURL string `json:"profile_pic_url"`
+	ProfilePicID  string `json:"profile_pic_id"`
+	IsVerified    bool   `json:"is_verified"`
+}
+
 func (live *Live) Create(width int, height int, message string) (*LiveCreateResponse, error) {
 	client := live.client
 
@@ -394,6 +410,33 @@ func (live *Live) AddPostLiveToIGTV(broadcastID int, coverUploadID string, title
 	}
 
 	res := &LiveAddPostLiveToIGTVResponse{}
+	err = json.Unmarshal(body, res)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (live *Live) GetFinalViewerList(broadcastID int) (*LiveGetFinalViewerListResponse, error) {
+	client := live.client
+
+	data, err := client.prepareData(
+		map[string]interface{}{},
+	)
+
+	body, err := client.sendRequest(
+		&reqOptions{
+			Endpoint: fmt.Sprintf(igAPILiveGetFinalViewerList, broadcastID),
+			Query:    generateSignature(data),
+			IsPost:   false,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &LiveGetFinalViewerListResponse{}
 	err = json.Unmarshal(body, res)
 	if err != nil {
 		return nil, err

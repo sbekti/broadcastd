@@ -33,5 +33,6 @@ const (
 	igAPILiveHeartbeatAndGetViewerCount = "/live/%d/heartbeat_and_get_viewer_count/"
 	igAPILiveGetPostLiveThumbnails      = "/live/%d/get_post_live_thumbnails/"
 	igAPILiveAddPostLiveToIGTV          = "/live/add_post_live_to_igtv/"
+	igAPILiveGetFinalViewerList         = "/live/%d/get_final_viewer_list/"
 	igAPIUploadPhoto                    = "/rupload_igphoto/"
 )

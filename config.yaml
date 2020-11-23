@@ -65,8 +65,5 @@ logging:
   # Sets whether logging is enabled.
   enabled: true
 
-  # Sets the path for the viewer log file.
-  viewer_log_file: /var/log/broadcastd/viewers.csv
-
-  # Sets the path for the comment log file.
-  comment_log_file: /var/log/broadcastd/comments.csv
+  # Sets the directory for saving log files.
+  log_directory: /var/log/broadcastd

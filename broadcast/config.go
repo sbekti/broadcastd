@@ -41,9 +41,8 @@ type IGTV struct {
 }
 
 type Logging struct {
-	Enabled        bool   `yaml:"enabled"`
-	ViewerLogFile  string `yaml:"viewer_log_file"`
-	CommentLogFile string `yaml:"comment_log_file"`
+	Enabled      bool   `yaml:"enabled"`
+	LogDirectory string `yaml:"log_directory"`
 }
 
 type Config struct {
@@ -105,12 +104,8 @@ func LoadConfig(configPath string) (*Config, error) {
 		config.LogLevel = defaultLogLevel
 	}
 
-	if config.Logging.ViewerLogFile == "" {
-		config.Logging.ViewerLogFile = "/var/log/broadcastd/viewers.csv"
-	}
-
-	if config.Logging.CommentLogFile == "" {
-		config.Logging.CommentLogFile = "/var/log/broadcastd/comments.csv"
+	if config.Logging.LogDirectory == "" {
+		config.Logging.LogDirectory = "/var/log/broadcastd"
 	}
 
 	config.path = configPath

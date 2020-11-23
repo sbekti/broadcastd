@@ -201,8 +201,8 @@ func (s *Stream) loopCycle() {
 
 				if s.config.Logging.Enabled {
 					currentTime := time.Now().Unix()
-					if err := s.broadcast.writeViewerLog(currentTime, s.name, int(heartbeat.ViewerCount),
-						heartbeat.TotalUniqueViewerCount); err != nil {
+					if err := s.broadcast.writeViewerLog(currentTime, s.broadcastID, s.name,
+						int(heartbeat.ViewerCount), heartbeat.TotalUniqueViewerCount); err != nil {
 						log.Errorf("stream: %s: unable to write viewer log: %v", s.name, err)
 					}
 				}
@@ -239,6 +239,12 @@ func (s *Stream) endBroadcastAndPost() {
 	if s.config.IGTV.Enabled {
 		if err := s.postToIGTV(); err != nil {
 			log.Errorf("stream: %s: unable to post to IGTV: %v", s.name, err)
+		}
+	}
+
+	if s.config.Logging.Enabled {
+		if err := s.saveFinalViewerList(); err != nil {
+			log.Errorf("stream: %s: unable to save final viewer list to file: %v", s.name, err)
 		}
 	}
 }
@@ -455,7 +461,7 @@ func (s *Stream) getComments(lastCommentTS int) (int, error) {
 		log.Debugf("stream: %s: comment %d at %d from %s: %s",
 			s.name, comment.PK, comment.CreatedAt, comment.User.Username, comment.Text)
 
-		if err := s.broadcast.broadcastComment(s.name, comment); err != nil {
+		if err := s.broadcast.broadcastComment(s.name, s.broadcastID, comment); err != nil {
 			log.Error(err)
 			log.Debugf("%+v", comment)
 			log.Errorf("stream: %s: %v", s.name, err)
@@ -528,6 +534,26 @@ func (s *Stream) postToIGTV() error {
 
 	log.Infof("stream: %s: successfully posted broadcast %d to IGTV with ID: %d",
 		s.name, s.broadcastID, igtv.IGTVPostID)
+	return nil
+}
+
+func (s *Stream) saveFinalViewerList() error {
+	log.Debugf("stream: %s: getting final viewer list for broadcast %d", s.name, s.broadcastID)
+	viewerList, err := s.instagram.Live.GetFinalViewerList(s.broadcastID)
+	if err != nil {
+		return err
+	}
+	if viewerList.Status != "ok" {
+		return fmt.Errorf("stream: %s: unable to get final viewer list for broadcast %d: %s",
+			s.name, s.broadcastID, viewerList.Status)
+	}
+
+	log.Debugf("stream: %s: saving final viewer list for broadcast %d to file", s.name, s.broadcastID)
+	err = s.broadcast.writeFinalViewerList(s.broadcastID, s.name, viewerList)
+	if err != nil {
+		return err
+	}
+	log.Infof("stream: %s: final viewer list saved to file successfully", s.name)
 	return nil
 }
 
