@@ -39,6 +39,10 @@ type LiveUnmuteCommentResponse struct {
 	Status       string `json:"status"`
 }
 
+type LiveDisableRequestToJoinResponse struct {
+	Status string `json:"status"`
+}
+
 type LiveInfoResponse struct {
 	ID                             int     `json:"id"`
 	RTMPPlaybackURL                string  `json:"rtmp_playback_url"`
@@ -284,6 +288,36 @@ func (live *Live) UnmuteComment(broadcastID int) (*LiveUnmuteCommentResponse, er
 	}
 
 	res := &LiveUnmuteCommentResponse{}
+	err = json.Unmarshal(body, res)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (live *Live) DisableRequestToJoin(broadcastID int) (*LiveDisableRequestToJoinResponse, error) {
+	client := live.client
+
+	data, err := client.prepareData(
+		map[string]interface{}{},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := client.sendRequest(
+		&reqOptions{
+			Endpoint: fmt.Sprintf(igAPILiveDisableRequestToJoin, broadcastID),
+			IsPost:   true,
+			Query:    generateSignature(data),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &LiveDisableRequestToJoinResponse{}
 	err = json.Unmarshal(body, res)
 	if err != nil {
 		return nil, err

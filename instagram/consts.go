@@ -29,6 +29,7 @@ const (
 	igAPILiveEnd                        = "/live/%d/end_broadcast/"
 	igAPILiveInfo                       = "/live/%d/info/"
 	igAPILiveUnmuteComment              = "/live/%d/unmute_comment/"
+	igAPILiveDisableRequestToJoin       = "/live/%d/disable_request_to_join/"
 	igAPILiveGetComment                 = "/live/%d/get_comment/"
 	igAPILiveHeartbeatAndGetViewerCount = "/live/%d/heartbeat_and_get_viewer_count/"
 	igAPILiveGetPostLiveThumbnails      = "/live/%d/get_post_live_thumbnails/"

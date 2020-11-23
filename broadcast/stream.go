@@ -393,6 +393,16 @@ func (s *Stream) createBroadcast(notify bool) error {
 			s.name, live.BroadcastID, unmute.Status)
 	}
 
+	log.Debugf("stream: %s: disabling request to join in broadcast %d", s.name, live.BroadcastID)
+	disableRequestToJoin, err := s.instagram.Live.DisableRequestToJoin(live.BroadcastID)
+	if err != nil {
+		return err
+	}
+	if disableRequestToJoin.Status != "ok" {
+		return fmt.Errorf("stream: %s: unable to disable request to join in broadcast %d: %s",
+			s.name, live.BroadcastID, disableRequestToJoin.Status)
+	}
+
 	s.broadcastID = live.BroadcastID
 	s.uploadURL = live.UploadURL
 	s.startTime = time.Now()
