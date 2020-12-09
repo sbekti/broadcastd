@@ -216,6 +216,19 @@ func (s *Stream) loopCycle() {
 		}
 	})
 
+	g.Go(func() error {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(time.Duration(s.config.Announcement.MinuteMark) * time.Minute):
+			err := s.putAnnouncement()
+			if err != nil {
+				log.Errorf("stream: %s: unable to put announcement: %v", s.name, err)
+			}
+			return nil
+		}
+	})
+
 	if err := g.Wait(); err != nil {
 		switch err.(type) {
 		case *instagram.LoginRequiredError:
@@ -564,6 +577,30 @@ func (s *Stream) saveFinalViewerList() error {
 		return err
 	}
 	log.Infof("stream: %s: final viewer list saved to file successfully", s.name)
+	return nil
+}
+
+func (s *Stream) putAnnouncement() error {
+	log.Debugf("stream: %s: putting announcement for broadcast %d", s.name, s.broadcastID)
+	comment, err := s.instagram.Live.Comment(s.broadcastID, s.config.Announcement.Message)
+	if err != nil {
+		return err
+	}
+	if comment.Status != "ok" {
+		return fmt.Errorf("stream: %s: unable to put announcement for broadcast %d: %s",
+			s.name, s.broadcastID, comment.Status)
+	}
+
+	log.Debugf("stream: %s: pinning announcement for broadcast %d", s.name, s.broadcastID)
+	pinComment, err := s.instagram.Live.PinComment(s.broadcastID, comment.Comment.PK)
+	if err != nil {
+		return err
+	}
+	if pinComment.Status != "ok" {
+		return fmt.Errorf("stream: %s: unable to pin announcement for broadcast %d: %s",
+			s.name, s.broadcastID, comment.Status)
+	}
+	log.Infof("stream: %s: announcement has been put successfully", s.name)
 	return nil
 }
 

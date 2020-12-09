@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	cryptorand "crypto/rand"
 	"crypto/sha256"
+	b64 "encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -71,4 +72,31 @@ func generateSignature(data string) map[string]string {
 		"%s.%s", generateHMAC(data, igSigKey), data,
 	)
 	return m
+}
+
+func randInt(min int, max int) int {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(max-min+1) + min
+}
+
+func max(x, y int) int {
+	if x < y {
+		return y
+	}
+	return x
+}
+
+func generateBreadcrumb(size int) string {
+	timeElapsed := randInt(500, 1500) + size + randInt(500, 1500)
+	textChangeEventCount := max(1, size/randInt(3, 5))
+	dt := time.Now().Unix() * 1000
+
+	data := fmt.Sprintf("%d %d %d %d", size, timeElapsed, textChangeEventCount, dt)
+	body := b64.StdEncoding.EncodeToString([]byte(data))
+
+	h := hmac.New(sha256.New, []byte(breadcrumbKey))
+	h.Write([]byte(data))
+	sig := b64.StdEncoding.EncodeToString(h.Sum(nil))
+
+	return sig + "\n" + body
 }

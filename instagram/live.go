@@ -3,6 +3,7 @@ package instagram
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 )
 
 type Live struct {
@@ -37,6 +38,17 @@ type LiveAddToPostResponse struct {
 type LiveUnmuteCommentResponse struct {
 	CommentMuted int    `json:"comment_muted"`
 	Status       string `json:"status"`
+}
+
+type LiveCommentResponse struct {
+	Comment struct {
+		PK int64 `json:"pk"`
+	} `json:"comment"`
+	Status string `json:"status"`
+}
+
+type LivePinCommentResponse struct {
+	Status string `json:"status"`
 }
 
 type LiveDisableRequestToJoinResponse struct {
@@ -348,6 +360,75 @@ func (live *Live) GetComment(broadcastID int, numCommentsRequested int, lastComm
 	}
 
 	res := &LiveGetCommentResponse{}
+	err = json.Unmarshal(body, res)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (live *Live) Comment(broadcastID int, message string) (*LiveCommentResponse, error) {
+	client := live.client
+
+	data, err := client.prepareData(
+		map[string]interface{}{
+			"user_breadcrumb":       generateBreadcrumb(len(message)),
+			"idempotence_token":     uuid.New(),
+			"comment_text":          message,
+			"live_or_vod":           1,
+			"offset_to_video_start": 0,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := client.sendRequest(
+		&reqOptions{
+			Endpoint: fmt.Sprintf(igAPILiveComment, broadcastID),
+			IsPost:   true,
+			Query:    generateSignature(data),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &LiveCommentResponse{}
+	err = json.Unmarshal(body, res)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (live *Live) PinComment(broadcastID int, commentID int64) (*LivePinCommentResponse, error) {
+	client := live.client
+
+	data, err := client.prepareData(
+		map[string]interface{}{
+			"offset_to_video_start": 0,
+			"comment_id":            commentID,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := client.sendRequest(
+		&reqOptions{
+			Endpoint: fmt.Sprintf(igAPILivePinComment, broadcastID),
+			IsPost:   true,
+			Query:    generateSignature(data),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &LivePinCommentResponse{}
 	err = json.Unmarshal(body, res)
 	if err != nil {
 		return nil, err

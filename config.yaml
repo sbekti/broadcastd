@@ -67,3 +67,11 @@ logging:
 
   # Sets the directory for saving log files.
   log_directory: /var/log/broadcastd
+
+# Settings for stream announcement.
+announcement:
+  # Sets the message to be posted as a comment.
+  message: 'Live stream will be continued shortly. Refresh Stories feed to rejoin.'
+
+  # Sets the minute mark to post the comment.
+  minute_mark: 59

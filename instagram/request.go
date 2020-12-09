@@ -172,7 +172,6 @@ func (i *Instagram) sendRequest(options *reqOptions) (body []byte, err error) {
 	}
 
 	body, err = ioutil.ReadAll(resp.Body)
-	fmt.Println(string(body))
 	if err == nil {
 		err = checkError(resp.StatusCode, body)
 	}

@@ -133,6 +133,11 @@ func (b *Broadcast) StopStreams() error {
 }
 
 func (b *Broadcast) broadcastComment(streamName string, broadcastID int, comment instagram.LiveComment) error {
+	if comment.User.Username == streamName {
+		// Comment originated from self, skip processing.
+		return nil
+	}
+
 	cacheKey := strconv.FormatInt(comment.PK, 10)
 	if _, err := b.commentsCache.Get(cacheKey); err == nil {
 		// Comment already exists, skip processing.

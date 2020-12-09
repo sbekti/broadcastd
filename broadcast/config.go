@@ -45,6 +45,11 @@ type Logging struct {
 	LogDirectory string `yaml:"log_directory"`
 }
 
+type Announcement struct {
+	Message    string `yaml:"message"`
+	MinuteMark int    `yaml:"minute_mark"`
+}
+
 type Config struct {
 	InputURL     string              `yaml:"input_url"`
 	Accounts     map[string]*Account `yaml:"accounts"`
@@ -57,6 +62,7 @@ type Config struct {
 	LogLevel     string              `yaml:"log_level"`
 	PollInterval int                 `yaml:"poll_interval"`
 	Logging      Logging             `yaml:"logging"`
+	Announcement Announcement        `yaml:"announcement"`
 	path         string
 }
 
