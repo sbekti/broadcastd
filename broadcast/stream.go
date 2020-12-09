@@ -196,7 +196,14 @@ func (s *Stream) loopCycle() {
 				heartbeat, err := s.heartbeatAndStatus()
 				if err != nil {
 					log.Errorf("stream: %s: unable to send heartbeat: %v", s.name, err)
-					continue
+					switch err.(type) {
+					case *instagram.LoginRequiredError:
+						return err
+					case *broadcastStoppedError:
+						return err
+					default:
+						continue
+					}
 				}
 				log.Debugf("stream: %s: heartbeat: %+v", s.name, heartbeat)
 
