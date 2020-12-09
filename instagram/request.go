@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -158,6 +159,7 @@ func (i *Instagram) sendRequest(options *reqOptions) (body []byte, err error) {
 	req.Header.Set("X-IG-Bandwidth-TotalBytes-B", "0")
 	req.Header.Set("X-IG-Bandwidth-TotalTime-MS", "0")
 
+	log.Tracef("Request %s %s", method, reqURL)
 	resp, err := i.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -172,6 +174,7 @@ func (i *Instagram) sendRequest(options *reqOptions) (body []byte, err error) {
 	}
 
 	body, err = ioutil.ReadAll(resp.Body)
+	log.Tracef("Response %s %s: %s", method, reqURL, string(body))
 	if err == nil {
 		err = checkError(resp.StatusCode, body)
 	}

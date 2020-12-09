@@ -195,6 +195,7 @@ func (s *Stream) loopCycle() {
 			case <-time.After(time.Duration(s.config.PollInterval) * time.Second):
 				heartbeat, err := s.heartbeatAndStatus()
 				if err != nil {
+					log.Errorf("stream: %s: unable to send heartbeat: %v", s.name, err)
 					return err
 				}
 				log.Debugf("stream: %s: heartbeat: %+v", s.name, heartbeat)
@@ -209,7 +210,7 @@ func (s *Stream) loopCycle() {
 
 				newLastCommentTS, err := s.getComments(lastCommentTS)
 				if err != nil {
-					return err
+					log.Errorf("stream: %s: unable to get comments: %v", s.name, err)
 				}
 				lastCommentTS = newLastCommentTS
 			}
