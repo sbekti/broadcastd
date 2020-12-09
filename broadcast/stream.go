@@ -196,9 +196,9 @@ func (s *Stream) loopCycle() {
 				heartbeat, err := s.heartbeatAndStatus()
 				if err != nil {
 					log.Errorf("stream: %s: unable to send heartbeat: %v", s.name, err)
-					return err
+				} else {
+					log.Debugf("stream: %s: heartbeat: %+v", s.name, heartbeat)
 				}
-				log.Debugf("stream: %s: heartbeat: %+v", s.name, heartbeat)
 
 				if s.config.Logging.Enabled {
 					currentTime := time.Now().Unix()
