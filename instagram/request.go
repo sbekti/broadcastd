@@ -166,15 +166,15 @@ func (i *Instagram) sendRequest(options *reqOptions) (body []byte, err error) {
 	}
 	defer resp.Body.Close()
 
-	reqURL, _ = url.Parse(igAPIBaseURL)
-	for _, value := range i.httpClient.Jar.Cookies(reqURL) {
+	cookieURL, _ := url.Parse(igAPIBaseURL)
+	for _, value := range i.httpClient.Jar.Cookies(cookieURL) {
 		if strings.Contains(value.Name, "csrftoken") {
 			i.token = value.Value
 		}
 	}
 
 	body, err = ioutil.ReadAll(resp.Body)
-	log.Tracef("Response %s %s: %s", method, reqURL, string(body))
+	log.Tracef("Response %s %s: %d: %s", method, reqURL, resp.StatusCode, string(body))
 	if err == nil {
 		err = checkError(resp.StatusCode, body)
 	}
